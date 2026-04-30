@@ -76,35 +76,66 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       <div 
-        className={`fixed inset-0 z-[105] bg-background/98 backdrop-blur-2xl transition-all duration-500 md:hidden ${
+        className={`fixed inset-0 z-[120] bg-background/98 backdrop-blur-3xl transition-all duration-700 md:hidden flex flex-col justify-between p-6 overflow-hidden ${
           menuOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
         }`}
       >
-        <div className="flex flex-col items-center justify-center h-full gap-8 px-6 text-center">
+        {/* Top Focus Glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] bg-primary/5 rounded-full blur-[100px] pointer-events-none" />
+
+        {/* Top Bar (Logo + Close) */}
+        <div className="flex items-center justify-between relative z-[130] pt-2">
+          <Link to="/" onClick={() => setMenuOpen(false)}>
+            <img src={graphoriaLogo} alt="Graphoria" className="h-8 transition-transform active:scale-95" />
+          </Link>
+          <button
+            className="p-3 -mr-3 text-foreground hover:text-primary transition-colors active:scale-90"
+            onClick={() => setMenuOpen(false)}
+          >
+            <X className="w-7 h-7" />
+          </button>
+        </div>
+
+        {/* Center Links (Main Focus) */}
+        <div className="flex flex-col items-center justify-center gap-6 relative z-[130]">
           {navLinks.map((link, i) => (
             <Link
               key={link.name}
               to={link.path}
               onClick={() => setMenuOpen(false)}
-              className={`text-2xl font-bold uppercase tracking-widest transition-all duration-500 transform ${
-                menuOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-              } ${isActive(link.path) ? "text-primary" : "text-foreground"}`}
-              style={{ transitionDelay: `${i * 100}ms` }}
+              className={`text-[24px] font-bold uppercase tracking-widest transition-all duration-500 transform ${
+                menuOpen ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"
+              } ${
+                isActive(link.path) 
+                  ? "text-primary scale-110" 
+                  : "text-foreground/70 hover:text-foreground hover:scale-105"
+              }`}
+              style={{ 
+                transitionDelay: `${i * 100}ms`,
+                textShadow: isActive(link.path) ? "0 0 20px rgba(151,255,0,0.3)" : "none"
+              }}
             >
               {link.name}
+              {isActive(link.path) && (
+                <div className="h-1 w-full bg-primary mt-1 rounded-full shadow-[0_0_10px_rgba(151,255,0,0.5)]" />
+              )}
             </Link>
           ))}
-          
+        </div>
+
+        {/* Bottom CTA (Contact) */}
+        <div className={`relative z-[130] pb-6 transition-all duration-700 transform ${
+          menuOpen ? "translate-y-0 opacity-100" : "translate-y-20 opacity-0"
+        }`}
+        style={{ transitionDelay: `${navLinks.length * 100}ms` }}
+        >
           <Link
             to="/contact"
             onClick={() => setMenuOpen(false)}
-            className={`mt-4 flex items-center gap-2 px-8 py-4 rounded-full bg-primary text-primary-foreground font-bold text-lg uppercase tracking-widest shadow-lg shadow-primary/20 transition-all duration-500 transform ${
-              menuOpen ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
-            }`}
-            style={{ transitionDelay: `${navLinks.length * 100}ms` }}
+            className="flex items-center justify-center gap-3 w-[90%] mx-auto py-5 rounded-full bg-primary text-primary-foreground font-bold text-sm uppercase tracking-widest shadow-2xl shadow-primary/20 transition-all hover:scale-[1.02] active:scale-95 group"
           >
-            Contact
-            <ArrowRight className="w-5 h-5" />
+            Get in Touch
+            <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
       </div>
