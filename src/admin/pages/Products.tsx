@@ -1,0 +1,545 @@
+import React, { useState, useEffect } from "react";
+import { Plus, Edit, Trash2, Search, Filter, Upload, Image as ImageIcon } from "lucide-react";
+import Button from "../components/Button";
+import Input from "../components/Input";
+import Modal from "../components/Modal";
+import CustomDropdown from "../../components/ui/CustomDropdown";
+import { supabase } from "@/lib/supabase";
+import { Project } from "@/data/projects";
+import { toast } from "sonner";
+
+const Products = () => {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [galleryImages, setGalleryImages] = useState<File[]>([]);
+  const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [dbProjects, setDbProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [categories, setCategories] = useState<{label: string, value: string}[]>([]);
+
+  // Load projects from Supabase
+  const fetchProjects = async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .order('id', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching projects:', error);
+      toast.error("Failed to load projects from database.");
+    } else {
+      setDbProjects(data || []);
+    }
+    setLoading(false);
+  };
+
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('name')
+      .order('name', { ascending: true });
+    
+    if (error) {
+      console.error('Error fetching categories:', error);
+    } else if (data) {
+      const options = data.map(cat => ({ label: cat.name, value: cat.name }));
+      setCategories(options);
+      if (options.length > 0) {
+        setSelectedCategory(options[0].value);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchProjects();
+    fetchCategories();
+  }, []);
+
+  const openAddModal = () => {
+    setEditingProject(null);
+    setCoverImage(null);
+    setGalleryImages([]);
+    if (categories.length > 0) {
+      setSelectedCategory(categories[0].value);
+    }
+    setIsAddModalOpen(true);
+  };
+
+  const openEditModal = (project: Project) => {
+    setEditingProject(project);
+    setSelectedCategory(project.category || (categories.length > 0 ? categories[0].value : ""));
+    setIsAddModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsAddModalOpen(false);
+    setEditingProject(null);
+  };
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error("File too large. Max 10MB allowed.");
+        return;
+      }
+      setCoverImage(file);
+    }
+  };
+
+  const handleGalleryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    const validFiles = files.filter(file => {
+      if (file.size > 10 * 1024 * 1024) {
+        toast.error(`${file.name} is too large. Max 10MB allowed.`);
+        return false;
+      }
+      return true;
+    });
+    setGalleryImages(prev => [...prev, ...validFiles]);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    
+    // Construct project object from form data using snake_case for Supabase
+    const projectData: any = {
+      cover_title: formData.get('Cover Title') as string,
+      cover_description: formData.get('Short Description (Cover Preview)') as string,
+      cover_tags: (formData.get('Cover Tags (Comma separated)') as string)?.split(',').map(t => t.trim()) || [],
+      category: selectedCategory, // Use the state from CustomDropdown
+      title: formData.get('Detail Page Title') as string,
+      slug: formData.get('URL Slug') as string,
+      description: formData.get('Full Detailed Description') as string,
+      client: formData.get('Client Name') as string,
+      problem: formData.get('The Challenge / Problem') as string,
+      goals: (formData.get('Project Goals (One per line)') as string)?.split('\n').filter(g => g.trim()) || [],
+      approach: {
+        research: formData.get('Research & Strategy') as string,
+        direction: formData.get('Creative Direction') as string,
+        execution: formData.get('Design Execution') as string,
+      },
+      results: {
+        impact: formData.get('Project Impact') as string,
+        brand_improvement: formData.get('Brand Improvement') as string,
+        positioning: formData.get('Market Positioning') as string,
+      },
+      testimonial: {
+        quote: formData.get('Quote') as string,
+        author: formData.get('Author Name') as string,
+        role: formData.get('Author Role') as string,
+      }
+    };
+
+    if (editingProject) {
+      const { error } = await supabase
+        .from('projects')
+        .update(projectData)
+        .eq('id', editingProject.id);
+      
+      if (error) {
+        toast.error("Error updating project: " + error.message);
+      } else {
+        toast.success("Project updated successfully!");
+        fetchProjects();
+        handleCloseModal();
+      }
+    } else {
+      const { error } = await supabase
+        .from('projects')
+        .insert([projectData]);
+      
+      if (error) {
+        toast.error("Error adding project: " + error.message);
+      } else {
+        toast.success("Project added successfully!");
+        fetchProjects();
+        handleCloseModal();
+      }
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this project?")) return;
+    
+    const { error } = await supabase
+      .from('projects')
+      .delete()
+      .eq('id', id);
+    
+    if (error) {
+      toast.error("Error deleting project: " + error.message);
+    } else {
+      toast.success("Project deleted successfully!");
+      fetchProjects();
+    }
+  };
+
+  const filteredProjects = dbProjects.filter(p => 
+    p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    p.cover_title?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500 pb-10">
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
+          <Input 
+            placeholder="Search projects..." 
+            className="pl-10"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="gap-2">
+            <Filter size={18} />
+            Filter
+          </Button>
+          <Button className="gap-2" onClick={openAddModal}>
+            <Plus size={18} />
+            Add Project
+          </Button>
+        </div>
+      </div>
+
+      {/* Add/Edit Project Modal */}
+      <Modal 
+        isOpen={isAddModalOpen} 
+        onClose={handleCloseModal} 
+        title={editingProject ? "Edit Project" : "Add New Project"}
+      >
+        <form className="space-y-8" onSubmit={handleSubmit}>
+          {/* Product Cover Content - MANDATORY FIRST LAYER */}
+          <div className="space-y-4 p-6 bg-primary/5 rounded-2xl border border-primary/20">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+              1. Product Cover Content (Mandatory)
+            </h4>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Cover Image (Required - Max 10MB)</label>
+              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary border border-border">
+                <div className="w-20 h-20 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground overflow-hidden">
+                  {coverImage ? (
+                    <img src={URL.createObjectURL(coverImage)} className="w-full h-full object-cover" alt="Preview" />
+                  ) : editingProject?.cover_image ? (
+                    <img src={editingProject.cover_image} className="w-full h-full object-cover" alt="Current" />
+                  ) : (
+                    <ImageIcon size={24} />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <input 
+                    type="file" 
+                    name="cover-upload"
+                    id="cover-upload" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleCoverChange}
+                  />
+                  <label 
+                    htmlFor="cover-upload"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-background border border-border rounded-lg text-sm font-medium hover:bg-secondary transition-all cursor-pointer"
+                  >
+                    <Upload size={16} />
+                    {coverImage || editingProject?.cover_image ? "Change Cover Image" : "Upload Cover Image"}
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <Input 
+              name="Cover Title"
+              label="Cover Title" 
+              placeholder="e.g. ARK Architectural Vision" 
+              defaultValue={editingProject?.cover_title || ""}
+              required
+            />
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Short Description (Cover Preview)</label>
+              <textarea 
+                name="Short Description (Cover Preview)"
+                className="w-full h-20 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none text-sm" 
+                placeholder="A brief one-liner for the product card..." 
+                defaultValue={editingProject?.cover_description || ""}
+                required
+              />
+            </div>
+
+            <Input 
+              name="Cover Tags (Comma separated)"
+              label="Cover Tags (Comma separated)" 
+              placeholder="Branding, 3D Rendering, Luxury" 
+              defaultValue={editingProject?.cover_tags?.join(", ") || ""}
+              required
+            />
+
+            <CustomDropdown 
+              label="Category"
+              options={categories}
+              value={selectedCategory}
+              onChange={setSelectedCategory}
+            />
+          </div>
+
+          {/* Product Full Details - SECOND LAYER */}
+          <div className="space-y-4 pt-4 border-t border-border">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground border-b border-border pb-2">
+              2. Product Full Details
+            </h4>
+            
+            <Input 
+              name="Detail Page Title"
+              label="Detail Page Title" 
+              placeholder="The main heading for the project page" 
+              defaultValue={editingProject?.title || ""}
+            />
+            
+            <Input 
+              name="URL Slug"
+              label="URL Slug" 
+              placeholder="e.g. ark-architectural" 
+              defaultValue={editingProject?.slug || ""}
+            />
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Full Detailed Description</label>
+              <textarea 
+                name="Full Detailed Description"
+                className="w-full h-32 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
+                placeholder="The full project story..." 
+                defaultValue={editingProject?.description || ""}
+              />
+            </div>
+          </div>
+
+          {/* Project Overview */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Project Overview</h4>
+            <Input 
+              name="Client Name"
+              label="Client Name" 
+              placeholder="Who was this for?" 
+              defaultValue={editingProject?.client || ""}
+            />
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">The Challenge / Problem</label>
+              <textarea 
+                name="The Challenge / Problem"
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
+                placeholder="What problem were we solving?" 
+                defaultValue={editingProject?.problem || ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Project Goals (One per line)</label>
+              <textarea 
+                name="Project Goals (One per line)"
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
+                placeholder="Goal 1&#10;Goal 2" 
+                defaultValue={editingProject?.goals?.join("\n") || ""}
+              />
+            </div>
+          </div>
+
+          {/* Our Approach */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Our Approach</h4>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Research & Strategy</label>
+              <textarea 
+                name="Research & Strategy"
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
+                placeholder="How did we start?" 
+                defaultValue={editingProject?.approach?.research || ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Creative Direction</label>
+              <textarea 
+                name="Creative Direction"
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
+                placeholder="What was the visual path?" 
+                defaultValue={editingProject?.approach?.direction || ""}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Design Execution</label>
+              <textarea 
+                name="Design Execution"
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
+                placeholder="How did we build it?" 
+                defaultValue={editingProject?.approach?.execution || ""}
+              />
+            </div>
+          </div>
+
+          {/* Results & Media */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Results & Showcase</h4>
+            <Input 
+              name="Project Impact"
+              label="Project Impact" 
+              placeholder="e.g. 50% increase in sales" 
+              defaultValue={editingProject?.results?.impact || ""}
+            />
+            <Input 
+              name="Brand Improvement"
+              label="Brand Improvement" 
+              placeholder="e.g. Unified visual identity" 
+              defaultValue={editingProject?.results?.brand_improvement || ""}
+            />
+            <Input 
+              name="Market Positioning"
+              label="Market Positioning" 
+              placeholder="e.g. Leader in luxury niche" 
+              defaultValue={editingProject?.results?.positioning || ""}
+            />
+            
+            {/* Gallery Multiple Upload */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Visual Showcase (Gallery - Max 10MB per image)</label>
+              <div className="p-4 rounded-xl bg-secondary border border-border space-y-4">
+                <input 
+                  type="file" 
+                  name="gallery-upload"
+                  id="gallery-upload" 
+                  className="hidden" 
+                  accept="image/*"
+                  multiple
+                  onChange={handleGalleryChange}
+                />
+                <label 
+                  htmlFor="gallery-upload"
+                  className="w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+                >
+                  <Upload size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                  <span className="text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">Upload Multiple Images</span>
+                </label>
+                
+                {galleryImages.length > 0 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {galleryImages.map((file, i) => (
+                      <div key={i} className="relative aspect-square rounded-lg bg-background border border-border overflow-hidden group">
+                        <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="Gallery preview" />
+                        <button 
+                          type="button"
+                          onClick={() => setGalleryImages(prev => prev.filter((_, idx) => idx !== i))}
+                          className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Testimonial */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Client Testimonial (Optional)</h4>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-muted-foreground ml-1">Quote</label>
+              <textarea 
+                name="Quote"
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
+                placeholder="What the client said..." 
+                defaultValue={editingProject?.testimonial?.quote || ""}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <Input 
+                name="Author Name"
+                label="Author Name" 
+                placeholder="John Doe" 
+                defaultValue={editingProject?.testimonial?.author || ""}
+              />
+              <Input 
+                name="Author Role"
+                label="Author Role" 
+                placeholder="CEO at Acme" 
+                defaultValue={editingProject?.testimonial?.role || ""}
+              />
+            </div>
+          </div>
+
+          <div className="pt-6 flex justify-end gap-3 sticky bottom-0 bg-card py-4 border-t border-border mt-8 flex-shrink-0">
+            <Button variant="outline" type="button" onClick={handleCloseModal}>Cancel</Button>
+            <Button type="submit">{editingProject ? "Update Project" : "Publish Project"}</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Table Section */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left">
+            <thead>
+              <tr className="border-b border-border bg-secondary/30">
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Product</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground">Category</th>
+                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-muted-foreground text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {loading ? (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">Loading projects...</td>
+                </tr>
+              ) : filteredProjects.map((product) => (
+                <tr key={product.id} className="hover:bg-secondary/20 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary border border-border">
+                        <img src={product.cover_image || product.image} alt={product.cover_title || product.title} className="w-full h-full object-cover" />
+                      </div>
+                      <span className="font-medium text-foreground">{product.cover_title || product.title}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+                      {product.category}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex justify-end gap-2">
+                      <button 
+                        onClick={() => openEditModal(product)}
+                        className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                      >
+                        <Edit size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(product.id)}
+                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {!loading && filteredProjects.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">No projects found.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Products;
