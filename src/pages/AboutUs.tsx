@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import graphoriaLogo from "@/assets/graphoria-logo.png";
 import Footer from "@/components/Footer";
+import { BRAND } from "@/config/brand";
 // TODO: Add missing image assets
 // import portfolio1 from "@/assets/Blue and red bottle/1z.jpg.jpeg";
 // import portfolio2 from "@/assets/chocolate/1 jpg.jpg.jpeg";
@@ -25,7 +26,7 @@ const AboutUs = () => {
           <div className="text-center mb-8 md:mb-12">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-bold tracking-widest uppercase mb-6">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              About Graphoria
+              About {BRAND.short}
             </div>
             <h1 className="text-3xl md:text-6xl font-bold text-foreground mb-4 max-w-[320px] md:max-w-none mx-auto leading-[1.2] md:leading-tight">
               The Studio Behind{" "}
@@ -34,7 +35,7 @@ const AboutUs = () => {
               </span>
             </h1>
             <p className="text-sm md:text-lg text-muted-foreground max-w-[320px] md:max-w-2xl mx-auto leading-[1.6] md:leading-relaxed">
-              We are a collective of designers, developers, and dreamers pushing the boundaries of digital creativity.
+              We are a collective of designers, developers, and dreamers pushing the boundaries of digital creativity at {BRAND.full}.
             </p>
           </div>
 
@@ -86,7 +87,7 @@ const AboutUs = () => {
               
               <div className="space-y-6 text-muted-foreground leading-[1.8] text-base">
                 <p className="text-foreground font-medium text-lg leading-relaxed border-l-2 border-primary pl-6">
-                  Graphoria was born from a simple belief: <span className="text-primary">design should be fearless</span>. We set out to challenge the ordinary.
+                  {BRAND.short} was born from a simple belief: <span className="text-primary">design should be fearless</span>. We set out to challenge the ordinary.
                 </p>
                 <p>
                   From bold packaging concepts to immersive brand identities, every project we take on is an opportunity to push <span className="text-primary">creative boundaries</span>. We don't just design — we engineer visual stories.
@@ -253,7 +254,7 @@ const AboutUs = () => {
             <h2 className="section-heading">
               Why Clients Choose{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-brand-green-glow">
-                Graphoria
+                {BRAND.short}
               </span>
             </h2>
             <div className="green-underline" />

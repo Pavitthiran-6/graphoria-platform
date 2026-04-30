@@ -3,6 +3,7 @@ import CustomDropdown from "@/components/ui/CustomDropdown";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { MessageCircle, Mail, MapPin } from "lucide-react";
+import { BRAND } from "@/config/brand";
 
 const projectTypes = [
 // ... (rest of the file follows)
@@ -376,7 +377,7 @@ const Contact = () => {
                 <div>
                   <h3 className="text-xl font-bold text-foreground mb-4">Get in Touch</h3>
                   <p className="text-muted-foreground leading-relaxed">
-                    We're here to help bring your creative vision to life. Reach out to us through any of the channels below.
+                    We're here to help bring your creative vision to life at {BRAND.full}. Reach out to us through any of the channels below.
                   </p>
                 </div>
 

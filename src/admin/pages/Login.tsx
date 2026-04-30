@@ -6,6 +6,7 @@ import Button from "../components/Button";
 import { toast } from "sonner";
 import { Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { BRAND } from "@/config/brand";
 
 const Login = () => {
   const navigate = useNavigate();
@@ -88,7 +89,7 @@ const Login = () => {
 
       <div className="w-full max-w-md z-10">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold tracking-tighter text-primary mb-2">Graphoria</h1>
+          <h1 className="text-4xl font-bold tracking-tighter text-primary mb-2">{BRAND.short}</h1>
           <div className="h-1 w-12 bg-primary mx-auto rounded-full" />
         </div>
 
@@ -150,7 +151,7 @@ const Login = () => {
 
           <div className="mt-8 pt-6 border-t border-white/5 text-center">
             <p className="text-xs text-muted-foreground">
-              &copy; {new Date().getFullYear()} Graphoria Studio. All rights reserved.
+              &copy; {new Date().getFullYear()} {BRAND.full}. All rights reserved.
             </p>
           </div>
         </div>

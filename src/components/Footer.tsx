@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import graphoriaLogo from "@/assets/graphoria-logo.png";
+import { BRAND } from "@/config/brand";
 
 const Footer = () => {
   return (
@@ -10,22 +11,22 @@ const Footer = () => {
           <div>
             <div className="mb-6">
               <Link to="/">
-                <img src={graphoriaLogo} alt="Graphoria" className="h-9" />
+                <img src={graphoriaLogo} alt={BRAND.short} className="h-9" />
               </Link>
             </div>
             <p className="text-muted-foreground text-sm leading-relaxed mb-4">
-              We are a digital design laboratory crafting the future of user interfaces. Merging art with code to create impossible experiences.
+              We are a digital design studio crafting impactful brand identities, premium packaging, and stunning user experiences. Merging art with strategy to define the future.
             </p>
             <p className="text-primary/90 text-sm font-semibold mt-4">
               Let’s build something great together.
             </p>
           </div>
-
+          
           {/* Company */}
           <div>
             <h4 className="text-foreground font-bold text-sm uppercase tracking-wider mb-6">COMPANY</h4>
             <ul className="space-y-4 text-muted-foreground text-sm">
-              <li><Link to="/about" className="hover:text-primary transition-colors">About Graphoria</Link></li>
+              <li><Link to="/about" className="hover:text-primary transition-colors">About {BRAND.short}</Link></li>
               <li><Link to="/our-work" className="hover:text-primary transition-colors">Our Work</Link></li>
               <li><Link to="/our-approach" className="hover:text-primary transition-colors">Our Approach</Link></li>
               <li><Link to="/contact" className="hover:text-primary transition-colors">Contact</Link></li>
@@ -74,7 +75,7 @@ const Footer = () => {
         {/* Bottom bar */}
         <div className="border-t border-border mt-12 pt-8 flex flex-col md:flex-row justify-between items-center text-xs text-muted-foreground/70">
           <div className="flex items-center gap-2">
-            <span>© 2026 Graphoria Studio</span>
+            <span>© 2026 {BRAND.full}</span>
             <span className="opacity-30">•</span>
             <span>All rights reserved</span>
           </div>

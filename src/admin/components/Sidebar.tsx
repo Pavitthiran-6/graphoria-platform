@@ -13,6 +13,7 @@ import {
 import graphoriaLogo from "@/assets/graphoria-logo.png";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/lib/supabase";
+import { BRAND } from "@/config/brand";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -59,7 +60,7 @@ const Sidebar = ({ isOpen, onClose }: SidebarProps) => {
           {/* Logo Section */}
           <div className="p-8 flex items-center justify-between">
             <Link to="/" className="flex items-center">
-              <img src={graphoriaLogo} alt="Graphoria" className="h-10" />
+              <img src={graphoriaLogo} alt={BRAND.short} className="h-10" />
             </Link>
             <button 
               onClick={onClose}

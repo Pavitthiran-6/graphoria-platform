@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import { BRAND } from "@/config/brand";
 
 const scrollToSection = (e: React.MouseEvent<HTMLAnchorElement>, targetId: string) => {
   e.preventDefault();
@@ -24,7 +25,7 @@ const HeroSection = () => {
         <div className="lg:w-1/2 space-y-6 md:space-y-8 z-10 w-full text-left">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-primary/30 bg-primary/5 text-primary text-[10px] md:text-xs font-bold tracking-widest uppercase">
             <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-            Graphoria Studio
+            {BRAND.full}
           </div>
 
           <h1 className="text-4xl sm:text-5xl md:text-7xl font-bold leading-[1.1] text-foreground">
@@ -35,12 +36,12 @@ const HeroSection = () => {
           </h1>
 
           <p className="text-base md:text-lg text-muted-foreground max-w-[95%] md:max-w-xl leading-relaxed border-l-4 border-primary pl-4 md:pl-6">
-            Welcome to <span className="text-foreground font-semibold">Graphoria</span>. We merge art with code to build digital experiences that define the future of user interaction.
+            Welcome to <span className="text-foreground font-semibold">{BRAND.full}</span>. We merge art with strategy to build brand experiences that define the future.
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 pt-2 md:pt-4 w-full sm:w-auto">
             <Link to="/our-work" className="glass-button text-center w-full sm:w-auto">View Our Work</Link>
-            <Link to="/about" className="outline-button text-center w-full sm:w-auto">About Studio</Link>
+            <Link to="/about" className="outline-button text-center w-full sm:w-auto">About Us</Link>
           </div>
         </div>
 
@@ -60,7 +61,7 @@ const HeroSection = () => {
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: "hsl(45, 100%, 50%, 0.8)" }} />
                 <div className="w-3 h-3 rounded-full bg-primary/80" />
               </div>
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">Graphoria UI</span>
+              <span className="text-[10px] text-muted-foreground uppercase tracking-widest">{BRAND.short} UI</span>
             </div>
             <div className="space-y-4">
               <div className="h-32 w-full rounded-xl bg-gradient-to-br from-primary/20 to-transparent border border-primary/30 flex items-center justify-center">

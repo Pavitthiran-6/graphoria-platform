@@ -1,8 +1,10 @@
+import { BRAND } from "@/config/brand";
+
 const WhyMattersSection = () => {
   const features = [
     {
       title: "Creative Innovation",
-      description: "At Graphoria, we bring bold, imaginative ideas to life, redefining design standards in every project.",
+      description: `At ${BRAND.short}, we bring bold, imaginative ideas to life, redefining design standards in every project.`,
       icon: (
         <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
@@ -32,7 +34,7 @@ const WhyMattersSection = () => {
   return (
     <section id="why-matters" className="px-6 md:px-12 max-w-7xl mx-auto py-8 md:py-20 lg:pt-12 lg:pb-20">
       <div className="text-center mb-10 md:mb-16">
-        <h2 className="section-heading">Why Graphoria Matters</h2>
+        <h2 className="section-heading">Why {BRAND.short} Matters</h2>
         <div className="green-underline" />
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
