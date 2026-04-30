@@ -20,10 +20,18 @@ const queryClient = new QueryClient();
 const AppContent = () => {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith('/admin');
+  
+  // Define all valid paths (excluding dynamic project paths for now)
+  const staticPaths = ['/', '/about', '/our-work', '/our-approach', '/contact'];
+  const isStaticPath = staticPaths.includes(location.pathname);
+  const isProjectDetailPath = location.pathname.startsWith('/project/');
+  
+  const isKnownPath = isStaticPath || isProjectDetailPath || isAdminPath;
+  const showNavbar = isKnownPath && !isAdminPath;
 
   return (
     <>
-      {!isAdminPath && <Navbar />}
+      {showNavbar && <Navbar />}
       <ScrollToTop />
       <Routes>
         <Route path="/" element={<Index />} />
