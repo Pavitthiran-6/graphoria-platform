@@ -526,24 +526,26 @@ const ProjectDetail = () => {
       </section>
 
       {/* CTA Section - Mobile Only */}
-      <section className="px-6 md:px-12 py-20 bg-gradient-to-b from-background to-card/50 md:hidden">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+      <section className="px-6 py-12 mt-10 bg-gradient-to-b from-background to-card/50 md:hidden border-t border-border/30">
+        <div className="max-w-[360px] mx-auto text-center">
+          <h2 className="text-[26px] font-bold text-foreground leading-[1.2] mb-3">
             Let's Build Your Brand
           </h2>
-          <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
+          <p className="text-[14px] leading-[1.6] text-muted-foreground/75 mb-6 max-w-[320px] mx-auto">
             Ready to transform your brand? Let's create something extraordinary together.
             Our team is here to bring your vision to life.
           </p>
-          <Link
-            to="/contact"
-            className="inline-flex items-center gap-2 px-8 py-4 bg-primary text-primary-foreground rounded-full font-medium text-lg hover:bg-primary/90 transition-all duration-300 hover:scale-105 hover:shadow-lg hover:shadow-primary/25 cursor-pointer"
-          >
-            Contact Us
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-            </svg>
-          </Link>
+          <div className="flex justify-center">
+            <Link
+              to="/contact"
+              className="w-full max-w-[260px] flex items-center justify-center gap-2 px-8 py-3.5 bg-primary text-primary-foreground rounded-full font-bold text-sm uppercase tracking-widest hover:bg-primary/90 transition-all duration-300 hover:scale-105 active:scale-95 shadow-lg shadow-primary/20 cursor-pointer"
+            >
+              Contact Us
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+              </svg>
+            </Link>
+          </div>
         </div>
       </section>
 
