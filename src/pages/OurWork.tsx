@@ -75,20 +75,16 @@ const OurWork = () => {
     <div className="min-h-screen bg-background">
 
       {/* Hero Section */}
-      <section className="pt-32 pb-16 px-6 md:px-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center max-w-4xl mx-auto">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6 text-foreground animate-fade-in">
-              Our{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-brand-green-glow">
-                Work
-              </span>
-            </h1>
-            <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              We deliver impactful design solutions that transform brands and captivate audiences.
-              From bold identities to stunning digital experiences, every project is crafted with precision and passion.
-            </p>
-          </div>
+      <section className="pt-12 pb-8 md:pt-[72px] md:pb-[48px] px-5">
+        <div className="max-w-[720px] mx-auto text-center">
+          <h1 className="text-[32px] md:text-[48px] font-bold text-foreground leading-tight mb-4 animate-fade-in">
+            Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-brand-green-glow">Work</span>
+          </h1>
+          <div className="w-10 h-[3px] bg-primary mx-auto mb-5 rounded-full" />
+          <p className="text-sm md:text-base text-muted-foreground/75 max-w-[600px] mx-auto leading-relaxed mb-6">
+            We deliver impactful design solutions that transform brands and captivate audiences.
+            From bold identities to stunning digital experiences, every project is crafted with precision and passion.
+          </p>
         </div>
       </section>
 
