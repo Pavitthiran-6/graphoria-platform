@@ -347,25 +347,27 @@ const Contact = () => {
                   )}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className={`w-full md:w-auto px-10 py-4 rounded-full font-bold text-lg transition-all duration-500 shadow-lg ${
-                    isLoading
-                      ? "bg-muted text-muted-foreground cursor-not-allowed"
-                      : "bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 hover:shadow-primary/30"
-                  }`}
-                >
-                  {isLoading ? (
-                    <span className="flex items-center gap-2">
-                      <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                      </svg>
-                      Sending...
-                    </span>
-                  ) : "Start Your Project"}
-                </button>
+                <div className="flex justify-center md:justify-start mt-6 mb-4">
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className={`w-full max-w-[320px] md:w-auto px-10 py-3.5 rounded-full font-semibold text-[15px] md:text-lg transition-all duration-500 shadow-lg whitespace-nowrap active:scale-[0.97] ${
+                      isLoading
+                        ? "bg-muted text-muted-foreground cursor-not-allowed"
+                        : "bg-primary text-primary-foreground hover:bg-primary/90 hover:scale-105 hover:shadow-primary/30"
+                    }`}
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Sending...
+                      </span>
+                    ) : "Start Your Project"}
+                  </button>
+                </div>
               </form>
             </div>
 
