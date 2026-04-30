@@ -77,7 +77,7 @@ const OurWork = () => {
       {/* Hero Section */}
       <section className="pt-28 pb-8 md:pt-[120px] md:pb-[48px] px-5">
         <div className="max-w-[720px] mx-auto text-center">
-          <h1 className="text-[32px] md:text-[48px] font-bold text-foreground leading-tight mb-4 animate-fade-in">
+          <h1 className="text-[40px] md:text-[64px] font-bold text-foreground leading-tight mb-4 animate-fade-in">
             Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-brand-green-glow">Work</span>
           </h1>
           <div className="w-10 h-[3px] bg-primary mx-auto mb-5 rounded-full" />
