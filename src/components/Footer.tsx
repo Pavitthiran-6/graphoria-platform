@@ -79,9 +79,9 @@ const Footer = () => {
             <span>All rights reserved</span>
           </div>
           <div className="flex gap-8 mt-6 md:mt-0">
-            <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+            <Link to="#" className="hover:text-primary transition-colors">Privacy Policy</Link>
             <span className="opacity-20">•</span>
-            <a href="#" className="hover:text-primary transition-colors">Terms of Service</a>
+            <Link to="#" className="hover:text-primary transition-colors">Terms of Service</Link>
           </div>
         </div>
       </div>
