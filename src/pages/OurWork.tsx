@@ -75,7 +75,7 @@ const OurWork = () => {
     <div className="min-h-screen bg-background">
 
       {/* Hero Section */}
-      <section className="pt-12 pb-8 md:pt-[72px] md:pb-[48px] px-5">
+      <section className="pt-28 pb-8 md:pt-[120px] md:pb-[48px] px-5">
         <div className="max-w-[720px] mx-auto text-center">
           <h1 className="text-[32px] md:text-[48px] font-bold text-foreground leading-tight mb-4 animate-fade-in">
             Our <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-brand-green-glow">Work</span>
