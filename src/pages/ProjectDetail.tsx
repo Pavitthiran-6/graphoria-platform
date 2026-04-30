@@ -526,7 +526,7 @@ const ProjectDetail = () => {
       </section>
 
       {/* CTA Section - Mobile Only */}
-      <section className="px-6 py-12 mt-10 bg-gradient-to-b from-background to-card/50 md:hidden border-t border-border/30">
+      <section className="px-6 py-12 mt-10 md:hidden">
         <div className="max-w-[360px] mx-auto text-center">
           <h2 className="text-[26px] font-bold text-foreground leading-[1.2] mb-3">
             Let's Build Your Brand
