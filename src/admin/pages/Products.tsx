@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Plus, Edit, Trash2, Search, Filter, Upload, Image as ImageIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import Textarea from "../components/Textarea";
 import Modal from "../components/Modal";
 import CustomDropdown from "../../components/ui/CustomDropdown";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +16,8 @@ const Products = () => {
   const [coverImage, setCoverImage] = useState<File | null>(null);
   const [galleryImages, setGalleryImages] = useState<File[]>([]);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -78,6 +82,7 @@ const Products = () => {
   const handleCloseModal = () => {
     setIsAddModalOpen(false);
     setEditingProject(null);
+    setErrors({});
   };
 
   const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -106,8 +111,39 @@ const Products = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    
+    // Validation
+    const coverTitle = formData.get("Cover Title") as string;
+    const coverDesc = formData.get("Short Description (Cover Preview)") as string;
+    const detailTitle = formData.get("Detail Page Title") as string;
+    const slug = formData.get("URL Slug") as string;
+    const fullDesc = formData.get("Full Detailed Description") as string;
+    const client = formData.get("Client Name") as string;
+    const problem = formData.get("The Challenge / Problem") as string;
 
-    setLoading(true);
+    const newErrors: Record<string, string> = {};
+
+    if (!editingProject && !coverImage) {
+      newErrors.cover = "Cover image is required";
+    }
+
+    if (!coverTitle?.trim()) newErrors.coverTitle = "Cover title is required";
+    if (!coverDesc?.trim()) newErrors.coverDesc = "Short description is required";
+    if (!detailTitle?.trim()) newErrors.detailTitle = "Detail title is required";
+    if (!slug?.trim()) newErrors.slug = "URL slug is required";
+    if (!fullDesc?.trim()) newErrors.fullDesc = "Full description is required";
+    if (!client?.trim()) newErrors.client = "Client name is required";
+    if (!problem?.trim()) newErrors.problem = "The challenge/problem description is required";
+    if (!selectedCategory) newErrors.category = "Category is required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error("Please fix the errors in the form.");
+      return;
+    }
+
+    setErrors({});
+    setIsSaving(true);
     let coverImageUrl = editingProject?.cover_image || editingProject?.image || "";
     let galleryUrls = editingProject?.gallery || [];
 
@@ -206,11 +242,11 @@ const Products = () => {
 
       fetchProjects();
       handleCloseModal();
-    } catch (error: any) {
-      console.error("Submit error:", error);
-      toast.error("Error saving project: " + error.message);
+    } catch (error) {
+      console.error('Error saving project:', error);
+      toast.error("Failed to save project.");
     } finally {
-      setLoading(false);
+      setIsSaving(false);
     }
   };
 
@@ -286,13 +322,16 @@ const Products = () => {
             </h4>
 
             <div className="space-y-2">
-              <label className="text-[11px] sm:text-sm font-medium text-muted-foreground ml-1">Cover Image (Required - Max 10MB)</label>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-3 sm:p-4 rounded-xl bg-secondary border border-border">
-                <div className="w-full sm:w-20 h-32 sm:h-20 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground overflow-hidden">
+              <label className="text-[11px] sm:text-sm font-medium text-muted-foreground ml-1">Cover Image (Required - Max 10MB) *</label>
+              <div className={cn(
+                "flex flex-col sm:flex-row sm:items-center gap-4 p-3 sm:p-4 rounded-xl bg-secondary border transition-all",
+                errors.cover ? "border-destructive" : "border-border"
+              )}>
+                <div className="w-full sm:w-20 h-32 sm:h-20 rounded-lg bg-secondary border border-border flex items-center justify-center text-muted-foreground overflow-hidden">
                   {coverImage ? (
-                    <img src={URL.createObjectURL(coverImage)} className="w-full h-full object-cover" alt="Preview" />
+                    <img src={URL.createObjectURL(coverImage)} className="w-full h-full object-contain" alt="Preview" />
                   ) : editingProject?.cover_image ? (
-                    <img src={editingProject.cover_image} className="w-full h-full object-cover" alt="Current" />
+                    <img src={editingProject.cover_image} className="w-full h-full object-contain" alt="Current" />
                   ) : (
                     <ImageIcon size={24} />
                   )}
@@ -315,40 +354,42 @@ const Products = () => {
                   </label>
                 </div>
               </div>
+              {errors.cover && <p className="text-xs text-destructive ml-1">{errors.cover}</p>}
             </div>
 
             <Input
               name="Cover Title"
-              label="Cover Title"
+              label="Cover Title *"
               placeholder="e.g. ARK Architectural Vision"
               defaultValue={editingProject?.cover_title || ""}
+              error={errors.coverTitle}
               required
             />
 
-            <div className="space-y-2">
-              <label className="text-[11px] sm:text-sm font-medium text-muted-foreground ml-1">Short Description (Cover Preview)</label>
-              <textarea
-                name="Short Description (Cover Preview)"
-                className="w-full h-20 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none text-sm"
-                placeholder="A brief one-liner for the product card..."
-                defaultValue={editingProject?.cover_description || ""}
-                required
-              />
-            </div>
+            <Textarea
+              name="Short Description (Cover Preview)"
+              label="Short Description (Cover Preview) *"
+              placeholder="A brief one-liner for the product card..."
+              defaultValue={editingProject?.cover_description || ""}
+              error={errors.coverDesc}
+              required
+              rows={3}
+            />
 
             <Input
               name="Cover Tags (Comma separated)"
-              label="Cover Tags (Comma separated)"
+              label="Cover Tags (Comma separated) *"
               placeholder="Branding, 3D Rendering, Luxury"
               defaultValue={editingProject?.cover_tags?.join(", ") || ""}
               required
             />
 
             <CustomDropdown
-              label="Category"
+              label="Category *"
               options={categories}
               value={selectedCategory}
               onChange={setSelectedCategory}
+              error={errors.category}
             />
           </div>
 
@@ -360,27 +401,28 @@ const Products = () => {
 
             <Input
               name="Detail Page Title"
-              label="Detail Page Title"
+              label="Detail Page Title *"
               placeholder="The main heading for the project page"
               defaultValue={editingProject?.title || ""}
+              error={errors.detailTitle}
             />
 
             <Input
               name="URL Slug"
-              label="URL Slug"
+              label="URL Slug *"
               placeholder="e.g. ark-architectural"
               defaultValue={editingProject?.slug || ""}
+              error={errors.slug}
             />
 
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground ml-1">Full Detailed Description</label>
-              <textarea
-                name="Full Detailed Description"
-                className="w-full h-32 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
-                placeholder="The full project story..."
-                defaultValue={editingProject?.description || ""}
-              />
-            </div>
+            <Textarea
+              name="Full Detailed Description"
+              label="Full Detailed Description *"
+              placeholder="The full project story..."
+              defaultValue={editingProject?.description || ""}
+              error={errors.fullDesc}
+              rows={4}
+            />
           </div>
 
           {/* Project Overview */}
@@ -388,19 +430,19 @@ const Products = () => {
             <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Project Overview</h4>
             <Input
               name="Client Name"
-              label="Client Name"
+              label="Client Name *"
               placeholder="Who was this for?"
               defaultValue={editingProject?.client || ""}
+              error={errors.client}
             />
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground ml-1">The Challenge / Problem</label>
-              <textarea
-                name="The Challenge / Problem"
-                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
-                placeholder="What problem were we solving?"
-                defaultValue={editingProject?.problem || ""}
-              />
-            </div>
+            <Textarea
+              name="The Challenge / Problem"
+              label="The Challenge / Problem *"
+              placeholder="What problem were we solving?"
+              defaultValue={editingProject?.problem || ""}
+              error={errors.problem}
+              rows={3}
+            />
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">Project Goals (One per line)</label>
               <textarea
@@ -536,8 +578,8 @@ const Products = () => {
           </div>
 
           <div className="relative sm:sticky sm:bottom-[-24px] sm:-mx-6 sm:-mb-6 bg-card px-0 sm:px-6 py-6 sm:py-4 border-t border-border mt-8 flex flex-col-reverse sm:flex-row justify-end gap-3 z-20 sm:shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
-            <Button variant="outline" type="button" onClick={handleCloseModal} className="w-full sm:w-auto">Cancel</Button>
-            <Button type="submit" className="w-full sm:w-auto">{editingProject ? "Update Project" : "Publish Project"}</Button>
+            <Button variant="outline" type="button" onClick={handleCloseModal} className="w-full sm:w-auto" disabled={isSaving}>Cancel</Button>
+            <Button type="submit" className="w-full sm:w-auto" isLoading={isSaving}>{editingProject ? "Update Project" : "Publish Project"}</Button>
           </div>
         </form>
       </Modal>

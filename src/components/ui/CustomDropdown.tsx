@@ -14,6 +14,7 @@ interface CustomDropdownProps {
   placeholder?: string;
   className?: string;
   label?: string;
+  error?: string;
 }
 
 const CustomDropdown = ({ 
@@ -22,7 +23,8 @@ const CustomDropdown = ({
   onChange, 
   placeholder = "Select an option", 
   className,
-  label
+  label,
+  error
 }: CustomDropdownProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -55,6 +57,7 @@ const CustomDropdown = ({
           className={cn(
             "w-full h-12 px-4 rounded-[14px] bg-secondary border border-border flex items-center justify-between text-sm transition-all focus:outline-none focus:border-primary/50",
             isOpen && "border-primary/50 ring-1 ring-primary/20",
+            error && "border-destructive focus:border-destructive focus:ring-destructive",
             !selectedOption && "text-muted-foreground"
           )}
         >
@@ -104,6 +107,11 @@ const CustomDropdown = ({
           </div>
         )}
       </div>
+      {error && (
+        <p className="text-xs text-destructive ml-1">
+          {error}
+        </p>
+      )}
     </div>
   );
 };

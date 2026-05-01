@@ -262,7 +262,7 @@ const ProjectDetail = () => {
 
           <div className="space-y-6 md:space-y-12">
             {(() => {
-              const imgs = Array.isArray(project.images) ? project.images : [];
+              const imgs = project.gallery && project.gallery.length > 0 ? project.gallery : (project.images || []);
               const count = imgs.length;
 
               if (count === 0) {
@@ -380,54 +380,66 @@ const ProjectDetail = () => {
           </button>
 
           {/* Previous Button */}
-          {project.images && project.images.length > 1 && (
-            <button
-              className="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center text-white/50 hover:text-primary transition-all bg-white/5 hover:bg-white/10 rounded-full z-[130]"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (selectedImageIndex !== null && project.images) {
-                  setSelectedImageIndex(selectedImageIndex > 0 ? selectedImageIndex - 1 : project.images.length - 1);
-                }
-              }}
-            >
-              <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          )}
+          {(() => {
+            const imgs = project.gallery && project.gallery.length > 0 ? project.gallery : (project.images || []);
+            if (imgs.length <= 1) return null;
+            return (
+              <button
+                className="absolute left-4 md:left-10 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center text-white/50 hover:text-primary transition-all bg-white/5 hover:bg-white/10 rounded-full z-[130]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedImageIndex !== null) {
+                    setSelectedImageIndex(selectedImageIndex > 0 ? selectedImageIndex - 1 : imgs.length - 1);
+                  }
+                }}
+              >
+                <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+            );
+          })()}
 
           {/* Next Button */}
-          {project.images && project.images.length > 1 && (
-            <button
-              className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center text-white/50 hover:text-primary transition-all bg-white/5 hover:bg-white/10 rounded-full z-[130]"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (selectedImageIndex !== null && project.images) {
-                  setSelectedImageIndex(selectedImageIndex < project.images.length - 1 ? selectedImageIndex + 1 : 0);
-                }
-              }}
-            >
-              <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-          )}
+          {(() => {
+            const imgs = project.gallery && project.gallery.length > 0 ? project.gallery : (project.images || []);
+            if (imgs.length <= 1) return null;
+            return (
+              <button
+                className="absolute right-4 md:right-10 top-1/2 -translate-y-1/2 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center text-white/50 hover:text-primary transition-all bg-white/5 hover:bg-white/10 rounded-full z-[130]"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (selectedImageIndex !== null) {
+                    setSelectedImageIndex(selectedImageIndex < imgs.length - 1 ? selectedImageIndex + 1 : 0);
+                  }
+                }}
+              >
+                <svg className="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            );
+          })()}
 
           {/* Full Screen Image */}
-          {selectedImageIndex !== null && project.images && (
-            <div className="relative w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
-              <img
-                src={project.images[selectedImageIndex]}
-                alt="Full screen view"
-                className="max-w-full max-h-[75vh] md:max-h-[85vh] w-auto h-auto object-contain select-none animate-in zoom-in-95 duration-300"
-              />
+          {(() => {
+            const imgs = project.gallery && project.gallery.length > 0 ? project.gallery : (project.images || []);
+            if (selectedImageIndex === null || !imgs[selectedImageIndex]) return null;
+            return (
+              <div className="relative w-full h-full flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
+                <img
+                  src={imgs[selectedImageIndex]}
+                  alt="Full screen view"
+                  className="max-w-full max-h-[75vh] md:max-h-[85vh] w-auto h-auto object-contain select-none animate-in zoom-in-95 duration-300"
+                />
 
-              {/* Image Counter */}
-              <div className="absolute -bottom-12 md:bottom-0 left-1/2 -translate-x-1/2 text-white/60 text-xs md:text-sm font-medium tracking-widest uppercase bg-white/5 px-6 py-2 rounded-full border border-white/10">
-                {selectedImageIndex + 1} <span className="mx-2 text-white/20">/</span> {project.images.length}
+                {/* Image Counter */}
+                <div className="absolute -bottom-12 md:bottom-0 left-1/2 -translate-x-1/2 text-white/60 text-xs md:text-sm font-medium tracking-widest uppercase bg-white/5 px-6 py-2 rounded-full border border-white/10">
+                  {selectedImageIndex + 1} <span className="mx-2 text-white/20">/</span> {imgs.length}
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       )}
 

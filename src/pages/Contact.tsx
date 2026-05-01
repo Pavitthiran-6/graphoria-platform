@@ -37,6 +37,7 @@ interface FormData {
 interface FormErrors {
   fullName?: string;
   email?: string;
+  phone?: string;
   projectType?: string;
   message?: string;
 }
@@ -67,6 +68,10 @@ const Contact = () => {
       newErrors.email = "Email Address is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
       newErrors.email = "Please enter a valid email address";
+    }
+
+    if (!formData.phone.trim()) {
+      newErrors.phone = "Phone Number is required";
     }
 
     if (!formData.projectType) {
@@ -116,15 +121,11 @@ const Contact = () => {
     setStatusMessage("");
     
     // Step 3: Validate input before insert
-    if (!formData.fullName.trim() || !formData.email.trim() || !formData.message.trim() || !formData.projectType) {
-      toast.error("All required fields (*) must be filled");
-      return;
-    }
-
     if (!validateForm()) {
+      toast.error("Please fill in all required fields.");
       return;
     }
-
+    
     // Step 6: Prevent multiple submissions
     setIsLoading(true);
 
@@ -289,7 +290,7 @@ const Contact = () => {
 
                   <div>
                     <label htmlFor="phone" className="block text-sm font-medium text-foreground mb-2 ml-1">
-                      Phone <span className="text-muted-foreground">(optional)</span>
+                      Phone <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="tel"
@@ -297,22 +298,27 @@ const Contact = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="w-full px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+                      className={`w-full px-4 py-3 bg-background border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none transition-all ${
+                        errors.phone 
+                          ? "border-red-500 focus:ring-1 focus:ring-red-500" 
+                          : "border-border focus:border-primary focus:ring-1 focus:ring-primary/20"
+                      }`}
                       placeholder="+91 00000 00000"
                     />
+                    {errors.phone && (
+                      <p className="mt-1 text-[11px] text-red-500 font-medium ml-1">⚠️ {errors.phone}</p>
+                    )}
                   </div>
 
                   <div className="relative">
                     <CustomDropdown 
-                      label="Project Type"
+                      label="Project Type *"
                       options={projectOptions}
                       value={formData.projectType}
                       onChange={(val) => handleDropdownChange("projectType", val)}
                       placeholder="Select Project Type"
+                      error={errors.projectType}
                     />
-                    {errors.projectType && (
-                      <p className="mt-1 text-[11px] text-red-500 font-medium ml-1">⚠️ {errors.projectType}</p>
-                    )}
                   </div>
                 </div>
 
@@ -400,8 +406,8 @@ const Contact = () => {
                     </div>
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Email</p>
-                      <a href="mailto:hello@graphoria.com" className="text-foreground font-semibold hover:text-primary transition-colors">
-                        hello@graphoria.com
+                      <a href="mailto:graphoriacreativitydesign@gmail.com" className="text-foreground font-semibold hover:text-primary transition-colors">
+                        graphoriacreativitydesign@gmail.com
                       </a>
                     </div>
                   </div>

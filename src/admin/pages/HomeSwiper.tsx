@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Image as ImageIcon, Save, Trash2, Plus, Edit2, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import Button from "../components/Button";
 import Input from "../components/Input";
+import Textarea from "../components/Textarea";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 
@@ -30,6 +32,7 @@ const HomeSwiper = () => {
   });
   const [tagInput, setTagInput] = useState("");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   // Load items from Supabase on mount
   const fetchItems = async () => {
@@ -52,15 +55,28 @@ const HomeSwiper = () => {
   }, []);
 
   const handleSave = async () => {
-    if (!currentItem.image && !selectedFile) {
-      toast.error("Please select an image");
-      return;
+    const hasImage = currentItem.image || selectedFile;
+    const title = currentItem.title?.trim();
+    const description = currentItem.description?.trim();
+    const slug = currentItem.slug?.trim();
+
+    const newErrors: Record<string, string> = {};
+
+    if (!hasImage) {
+      newErrors.image = "Image is required";
     }
-    if (!currentItem.title || !currentItem.description) {
-      toast.error("Please fill in all required fields (Title, Description)");
+
+    if (!title) newErrors.title = "Title is required";
+    if (!description) newErrors.description = "Description is required";
+    if (!slug) newErrors.slug = "URL slug is required";
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error("Please fill in all required fields.");
       return;
     }
 
+    setErrors({});
     setLoading(true);
     let imageUrl = currentItem.image || "";
 
@@ -242,12 +258,15 @@ const HomeSwiper = () => {
                     />
                     <label
                       htmlFor="image-upload"
-                      className="flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed border-border hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+                      className={cn(
+                        "flex flex-col items-center justify-center w-full h-32 rounded-xl border-2 border-dashed transition-all cursor-pointer group",
+                        errors.image ? "border-destructive bg-destructive/5" : "border-border hover:border-primary/50 hover:bg-primary/5"
+                      )}
                     >
                       <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                        <Plus className="w-8 h-8 text-muted-foreground group-hover:text-primary transition-colors mb-2" />
-                        <p className="text-sm text-muted-foreground">
-                          <span className="font-semibold">Click to upload</span> or drag and drop
+                        <Plus className={cn("w-8 h-8 mb-2 transition-colors", errors.image ? "text-destructive" : "text-muted-foreground group-hover:text-primary")} />
+                        <p className={cn("text-sm", errors.image ? "text-destructive" : "text-muted-foreground")}>
+                          <span className="font-semibold">{errors.image || "Click to upload"}</span> or drag and drop
                         </p>
                         <p className="text-xs text-muted-foreground/60 mt-1">PNG, JPG or WEBP (Max. 10MB)</p>
                       </div>
@@ -256,10 +275,14 @@ const HomeSwiper = () => {
                 </div>
               </div>
               <Input
-                label="Title (Required)"
+                label="Title (Required) *"
                 placeholder="Enter swiper title"
                 value={currentItem.title}
-                onChange={(e) => setCurrentItem({ ...currentItem, title: e.target.value })}
+                onChange={(e) => {
+                  setCurrentItem({ ...currentItem, title: e.target.value });
+                  if (errors.title) setErrors({ ...errors, title: "" });
+                }}
+                error={errors.title}
               />
               <Input
                 label="Order Index"
@@ -269,21 +292,27 @@ const HomeSwiper = () => {
                 onChange={(e) => setCurrentItem({ ...currentItem, order_index: parseInt(e.target.value) || 0 })}
               />
               <Input
-                label="Project Slug (Required for linking)"
+                label="Project Slug (Required for linking) *"
                 placeholder="e.g. ark-architectural"
                 value={currentItem.slug || ""}
-                onChange={(e) => setCurrentItem({ ...currentItem, slug: e.target.value })}
+                onChange={(e) => {
+                  setCurrentItem({ ...currentItem, slug: e.target.value });
+                  if (errors.slug) setErrors({ ...errors, slug: "" });
+                }}
+                error={errors.slug}
               />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground ml-1">Description (Required)</label>
-              <textarea
-                className="w-full h-[376px] px-4 py-3 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none text-sm"
-                placeholder="Enter swiper description..."
-                value={currentItem.description}
-                onChange={(e) => setCurrentItem({ ...currentItem, description: e.target.value })}
-              />
-            </div>
+            <Textarea
+              label="Description (Required) *"
+              className="h-[376px]"
+              placeholder="Enter swiper description..."
+              value={currentItem.description}
+              onChange={(e) => {
+                setCurrentItem({ ...currentItem, description: e.target.value });
+                if (errors.description) setErrors({ ...errors, description: "" });
+              }}
+              error={errors.description}
+            />
           </div>
 
           <div className="space-y-3">
@@ -326,7 +355,7 @@ const HomeSwiper = () => {
           </div>
 
           <div className="pt-4 border-t border-border flex justify-end">
-            <Button onClick={handleSave} className="gap-2 px-8">
+            <Button onClick={handleSave} className="gap-2 px-8" isLoading={loading}>
               <Save size={18} />
               {isEditing ? "Update Item" : "Add to Swiper"}
             </Button>
