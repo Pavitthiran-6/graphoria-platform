@@ -18,7 +18,7 @@ const Products = () => {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
-  const [categories, setCategories] = useState<{label: string, value: string}[]>([]);
+  const [categories, setCategories] = useState<{ label: string, value: string }[]>([]);
 
   // Load projects from Supabase
   const fetchProjects = async () => {
@@ -27,7 +27,7 @@ const Products = () => {
       .from('projects')
       .select('*')
       .order('id', { ascending: false });
-    
+
     if (error) {
       console.error('Error fetching projects:', error);
       toast.error("Failed to load projects from database.");
@@ -42,7 +42,7 @@ const Products = () => {
       .from('categories')
       .select('name')
       .order('name', { ascending: true });
-    
+
     if (error) {
       console.error('Error fetching categories:', error);
     } else if (data) {
@@ -106,7 +106,7 @@ const Products = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     setLoading(true);
     let coverImageUrl = editingProject?.cover_image || editingProject?.image || "";
     let galleryUrls = editingProject?.gallery || [];
@@ -127,7 +127,7 @@ const Products = () => {
         const { data: { publicUrl } } = supabase.storage
           .from('images')
           .getPublicUrl(filePath);
-        
+
         coverImageUrl = publicUrl;
       }
 
@@ -148,7 +148,7 @@ const Products = () => {
             const { data: { publicUrl } } = supabase.storage
               .from('images')
               .getPublicUrl(filePath);
-            
+
             return publicUrl;
           })
         );
@@ -192,14 +192,14 @@ const Products = () => {
           .from('projects')
           .update(projectData)
           .eq('id', editingProject.id);
-        
+
         if (error) throw error;
         toast.success("Project updated successfully!");
       } else {
         const { error } = await supabase
           .from('projects')
           .insert([projectData]);
-        
+
         if (error) throw error;
         toast.success("Project added successfully!");
       }
@@ -216,12 +216,12 @@ const Products = () => {
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this project?")) return;
-    
+
     const { error } = await supabase
       .from('projects')
       .delete()
       .eq('id', id);
-    
+
     if (error) {
       toast.error("Error deleting project: " + error.message);
     } else {
@@ -231,14 +231,14 @@ const Products = () => {
   };
 
   const filteredProjects = dbProjects.filter(p => {
-    const matchesSearch = 
+    const matchesSearch =
       p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.cover_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       p.client?.toLowerCase().includes(searchTerm.toLowerCase());
-    
+
     const matchesCategory = filterCategory === "All" || p.category === filterCategory;
-    
+
     return matchesSearch && matchesCategory;
   });
 
@@ -248,8 +248,8 @@ const Products = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
-          <Input 
-            placeholder="Search projects..." 
+          <Input
+            placeholder="Search projects..."
             className="pl-10"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -257,7 +257,7 @@ const Products = () => {
         </div>
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
           <div className="w-full sm:w-48">
-            <CustomDropdown 
+            <CustomDropdown
               options={[{ label: "All Categories", value: "All" }, ...categories]}
               value={filterCategory}
               onChange={setFilterCategory}
@@ -272,23 +272,23 @@ const Products = () => {
       </div>
 
       {/* Add/Edit Project Modal */}
-      <Modal 
-        isOpen={isAddModalOpen} 
-        onClose={handleCloseModal} 
+      <Modal
+        isOpen={isAddModalOpen}
+        onClose={handleCloseModal}
         title={editingProject ? "Edit Project" : "Add New Project"}
       >
         <form className="space-y-8" onSubmit={handleSubmit}>
           {/* Product Cover Content - MANDATORY FIRST LAYER */}
-          <div className="space-y-4 p-6 bg-primary/5 rounded-2xl border border-primary/20">
-            <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2 flex items-center gap-2">
+          <div className="space-y-4 p-4 sm:p-6 bg-primary/5 rounded-2xl border border-primary/20">
+            <h4 className="text-xs sm:text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
               1. Product Cover Content (Mandatory)
             </h4>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground ml-1">Cover Image (Required - Max 10MB)</label>
-              <div className="flex items-center gap-4 p-4 rounded-xl bg-secondary border border-border">
-                <div className="w-20 h-20 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground overflow-hidden">
+              <label className="text-[11px] sm:text-sm font-medium text-muted-foreground ml-1">Cover Image (Required - Max 10MB)</label>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-4 p-3 sm:p-4 rounded-xl bg-secondary border border-border">
+                <div className="w-full sm:w-20 h-32 sm:h-20 rounded-lg bg-background border border-border flex items-center justify-center text-muted-foreground overflow-hidden">
                   {coverImage ? (
                     <img src={URL.createObjectURL(coverImage)} className="w-full h-full object-cover" alt="Preview" />
                   ) : editingProject?.cover_image ? (
@@ -298,17 +298,17 @@ const Products = () => {
                   )}
                 </div>
                 <div className="flex-1">
-                  <input 
-                    type="file" 
+                  <input
+                    type="file"
                     name="cover-upload"
-                    id="cover-upload" 
-                    className="hidden" 
+                    id="cover-upload"
+                    className="hidden"
                     accept="image/*"
                     onChange={handleCoverChange}
                   />
-                  <label 
+                  <label
                     htmlFor="cover-upload"
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-background border border-border rounded-lg text-sm font-medium hover:bg-secondary transition-all cursor-pointer"
+                    className="flex sm:inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-background border border-border rounded-lg text-sm font-medium hover:bg-secondary transition-all cursor-pointer w-full sm:w-auto"
                   >
                     <Upload size={16} />
                     {coverImage || editingProject?.cover_image ? "Change Cover Image" : "Upload Cover Image"}
@@ -317,34 +317,34 @@ const Products = () => {
               </div>
             </div>
 
-            <Input 
+            <Input
               name="Cover Title"
-              label="Cover Title" 
-              placeholder="e.g. ARK Architectural Vision" 
+              label="Cover Title"
+              placeholder="e.g. ARK Architectural Vision"
               defaultValue={editingProject?.cover_title || ""}
               required
             />
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground ml-1">Short Description (Cover Preview)</label>
-              <textarea 
+              <label className="text-[11px] sm:text-sm font-medium text-muted-foreground ml-1">Short Description (Cover Preview)</label>
+              <textarea
                 name="Short Description (Cover Preview)"
-                className="w-full h-20 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none text-sm" 
-                placeholder="A brief one-liner for the product card..." 
+                className="w-full h-20 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none text-sm"
+                placeholder="A brief one-liner for the product card..."
                 defaultValue={editingProject?.cover_description || ""}
                 required
               />
             </div>
 
-            <Input 
+            <Input
               name="Cover Tags (Comma separated)"
-              label="Cover Tags (Comma separated)" 
-              placeholder="Branding, 3D Rendering, Luxury" 
+              label="Cover Tags (Comma separated)"
+              placeholder="Branding, 3D Rendering, Luxury"
               defaultValue={editingProject?.cover_tags?.join(", ") || ""}
               required
             />
 
-            <CustomDropdown 
+            <CustomDropdown
               label="Category"
               options={categories}
               value={selectedCategory}
@@ -357,27 +357,27 @@ const Products = () => {
             <h4 className="text-sm font-bold uppercase tracking-widest text-muted-foreground border-b border-border pb-2">
               2. Product Full Details
             </h4>
-            
-            <Input 
+
+            <Input
               name="Detail Page Title"
-              label="Detail Page Title" 
-              placeholder="The main heading for the project page" 
+              label="Detail Page Title"
+              placeholder="The main heading for the project page"
               defaultValue={editingProject?.title || ""}
             />
-            
-            <Input 
+
+            <Input
               name="URL Slug"
-              label="URL Slug" 
-              placeholder="e.g. ark-architectural" 
+              label="URL Slug"
+              placeholder="e.g. ark-architectural"
               defaultValue={editingProject?.slug || ""}
             />
 
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">Full Detailed Description</label>
-              <textarea 
+              <textarea
                 name="Full Detailed Description"
-                className="w-full h-32 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
-                placeholder="The full project story..." 
+                className="w-full h-32 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
+                placeholder="The full project story..."
                 defaultValue={editingProject?.description || ""}
               />
             </div>
@@ -386,27 +386,27 @@ const Products = () => {
           {/* Project Overview */}
           <div className="space-y-4">
             <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Project Overview</h4>
-            <Input 
+            <Input
               name="Client Name"
-              label="Client Name" 
-              placeholder="Who was this for?" 
+              label="Client Name"
+              placeholder="Who was this for?"
               defaultValue={editingProject?.client || ""}
             />
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">The Challenge / Problem</label>
-              <textarea 
+              <textarea
                 name="The Challenge / Problem"
-                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
-                placeholder="What problem were we solving?" 
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
+                placeholder="What problem were we solving?"
                 defaultValue={editingProject?.problem || ""}
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">Project Goals (One per line)</label>
-              <textarea 
+              <textarea
                 name="Project Goals (One per line)"
-                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
-                placeholder="Goal 1&#10;Goal 2" 
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
+                placeholder="Goal 1&#10;Goal 2"
                 defaultValue={editingProject?.goals?.join("\n") || ""}
               />
             </div>
@@ -417,28 +417,28 @@ const Products = () => {
             <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Our Approach</h4>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">Research & Strategy</label>
-              <textarea 
+              <textarea
                 name="Research & Strategy"
-                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
-                placeholder="How did we start?" 
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
+                placeholder="How did we start?"
                 defaultValue={editingProject?.approach?.research || ""}
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">Creative Direction</label>
-              <textarea 
+              <textarea
                 name="Creative Direction"
-                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
-                placeholder="What was the visual path?" 
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
+                placeholder="What was the visual path?"
                 defaultValue={editingProject?.approach?.direction || ""}
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">Design Execution</label>
-              <textarea 
+              <textarea
                 name="Design Execution"
-                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
-                placeholder="How did we build it?" 
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
+                placeholder="How did we build it?"
                 defaultValue={editingProject?.approach?.execution || ""}
               />
             </div>
@@ -447,57 +447,57 @@ const Products = () => {
           {/* Results & Media */}
           <div className="space-y-4">
             <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Results & Showcase</h4>
-            <Input 
+            <Input
               name="Project Impact"
-              label="Project Impact" 
-              placeholder="e.g. 50% increase in sales" 
+              label="Project Impact"
+              placeholder="e.g. 50% increase in sales"
               defaultValue={editingProject?.results?.impact || ""}
             />
-            <Input 
+            <Input
               name="Brand Improvement"
-              label="Brand Improvement" 
-              placeholder="e.g. Unified visual identity" 
+              label="Brand Improvement"
+              placeholder="e.g. Unified visual identity"
               defaultValue={editingProject?.results?.brand_improvement || ""}
             />
-            <Input 
+            <Input
               name="Market Positioning"
-              label="Market Positioning" 
-              placeholder="e.g. Leader in luxury niche" 
+              label="Market Positioning"
+              placeholder="e.g. Leader in luxury niche"
               defaultValue={editingProject?.results?.positioning || ""}
             />
-            
+
             {/* Gallery Multiple Upload */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-muted-foreground ml-1">Visual Showcase (Gallery - Max 10MB per image)</label>
-              <div className="p-4 rounded-xl bg-secondary border border-border space-y-4">
-                <input 
-                  type="file" 
+              <label className="text-[11px] sm:text-sm font-medium text-muted-foreground ml-1">Visual Showcase (Gallery - Max 10MB per image)</label>
+              <div className="p-3 sm:p-4 rounded-xl bg-secondary border border-border space-y-4">
+                <input
+                  type="file"
                   name="gallery-upload"
-                  id="gallery-upload" 
-                  className="hidden" 
+                  id="gallery-upload"
+                  className="hidden"
                   accept="image/*"
                   multiple
                   onChange={handleGalleryChange}
                 />
-                <label 
+                <label
                   htmlFor="gallery-upload"
-                  className="w-full h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
+                  className="w-full h-24 sm:h-20 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center gap-1 hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group"
                 >
                   <Upload size={20} className="text-muted-foreground group-hover:text-primary transition-colors" />
                   <span className="text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">Upload Multiple Images</span>
                 </label>
-                
+
                 {galleryImages.length > 0 && (
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     {galleryImages.map((file, i) => (
                       <div key={i} className="relative aspect-square rounded-lg bg-background border border-border overflow-hidden group">
                         <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="Gallery preview" />
-                        <button 
+                        <button
                           type="button"
                           onClick={() => setGalleryImages(prev => prev.filter((_, idx) => idx !== i))}
-                          className="absolute top-1 right-1 p-1 bg-destructive text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="absolute top-1 right-1 p-1.5 bg-destructive text-white rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
                         >
-                          <Trash2 size={12} />
+                          <Trash2 size={14} />
                         </button>
                       </div>
                     ))}
@@ -512,32 +512,32 @@ const Products = () => {
             <h4 className="text-sm font-bold uppercase tracking-widest text-primary border-b border-primary/20 pb-2">Client Testimonial (Optional)</h4>
             <div className="space-y-2">
               <label className="text-sm font-medium text-muted-foreground ml-1">Quote</label>
-              <textarea 
+              <textarea
                 name="Quote"
-                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none" 
-                placeholder="What the client said..." 
+                className="w-full h-24 px-4 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-primary/50 transition-all resize-none"
+                placeholder="What the client said..."
                 defaultValue={editingProject?.testimonial?.quote || ""}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <Input 
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Input
                 name="Author Name"
-                label="Author Name" 
-                placeholder="John Doe" 
+                label="Author Name"
+                placeholder="John Doe"
                 defaultValue={editingProject?.testimonial?.author || ""}
               />
-              <Input 
+              <Input
                 name="Author Role"
-                label="Author Role" 
-                placeholder="CEO at Acme" 
+                label="Author Role"
+                placeholder="CEO at Acme"
                 defaultValue={editingProject?.testimonial?.role || ""}
               />
             </div>
           </div>
 
-          <div className="pt-6 flex justify-end gap-3 sticky bottom-0 bg-card py-4 border-t border-border mt-8 flex-shrink-0">
-            <Button variant="outline" type="button" onClick={handleCloseModal}>Cancel</Button>
-            <Button type="submit">{editingProject ? "Update Project" : "Publish Project"}</Button>
+          <div className="relative sm:sticky sm:bottom-[-24px] sm:-mx-6 sm:-mb-6 bg-card px-0 sm:px-6 py-6 sm:py-4 border-t border-border mt-8 flex flex-col-reverse sm:flex-row justify-end gap-3 z-20 sm:shadow-[0_-10px_20px_rgba(0,0,0,0.1)]">
+            <Button variant="outline" type="button" onClick={handleCloseModal} className="w-full sm:w-auto">Cancel</Button>
+            <Button type="submit" className="w-full sm:w-auto">{editingProject ? "Update Project" : "Publish Project"}</Button>
           </div>
         </form>
       </Modal>
@@ -559,10 +559,10 @@ const Products = () => {
               <div key={product.id} className="p-4 flex flex-col gap-4">
                 <div className="flex gap-4">
                   <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary border border-border flex-shrink-0 shadow-sm">
-                    <img 
-                      src={product.cover_image || product.image} 
-                      alt={product.cover_title || product.title} 
-                      className="w-full h-full object-cover" 
+                    <img
+                      src={product.cover_image || product.image}
+                      alt={product.cover_title || product.title}
+                      className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="flex flex-col justify-between py-0.5">
@@ -575,13 +575,13 @@ const Products = () => {
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-2">
-                      <button 
+                      <button
                         onClick={() => openEditModal(product)}
                         className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-secondary text-xs font-medium text-foreground hover:text-primary transition-all border border-border"
                       >
                         <Edit size={14} /> Edit
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDelete(product.id)}
                         className="p-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-destructive transition-colors border border-border"
                       >
@@ -629,13 +629,13 @@ const Products = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2">
-                          <button 
+                          <button
                             onClick={() => openEditModal(product)}
                             className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
                           >
                             <Edit size={18} />
                           </button>
-                          <button 
+                          <button
                             onClick={() => handleDelete(product.id)}
                             className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
                           >
