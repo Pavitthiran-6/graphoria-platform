@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { Search, ChevronDown } from "lucide-react";
 import Footer from "@/components/Footer";
+import CustomDropdown from "@/components/ui/CustomDropdown";
 
 import { Project, Category } from "@/data/projects";
 import { supabase } from "@/lib/supabase";
@@ -13,6 +15,7 @@ const OurWork = () => {
   const [dynamicProjects, setDynamicProjects] = useState<Project[]>([]);
   const [dbCategories, setDbCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -67,9 +70,18 @@ const OurWork = () => {
     }
   }, [searchParams, dbCategories]);
 
-  const filteredProjects = activeCategory === "All"
-    ? dynamicProjects
-    : dynamicProjects.filter(project => project.category === activeCategory);
+  const filteredProjects = dynamicProjects.filter(project => {
+    const matchesCategory = activeCategory === "All" || project.category === activeCategory;
+    const matchesSearch =
+      project.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.cover_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.cover_description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (Array.isArray(project.cover_tags) && project.cover_tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
+
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -88,33 +100,71 @@ const OurWork = () => {
         </div>
       </section>
 
-      {/* Category Filter */}
-      <section className="px-0 md:px-12 pb-12">
+      {/* Filter & Search Section */}
+      <section className="px-4 md:px-12 pb-12 relative z-50">
         <div className="max-w-7xl mx-auto">
-          <div className="flex flex-wrap justify-center gap-2 md:gap-3 px-4 md:px-0">
-            {loading ? (
-              // Category Skeletons
-              Array.from({ length: 5 }).map((_, i) => (
-                <div
-                  key={i}
-                  className="flex-1 min-w-[28%] h-10 bg-card/50 rounded-full animate-pulse border border-border/50"
-                />
-              ))
-            ) : (
-              dbCategories.map((category) => (
-                <button
-                  key={category}
-                  onClick={() => setActiveCategory(category)}
-                  className={`flex-1 md:flex-initial min-w-[28%] max-w-[48%] md:min-w-0 md:max-w-none px-2 py-2.5 md:px-6 md:py-3 rounded-full text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 cursor-pointer text-center
-                    ${activeCategory === category
-                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                      : "bg-card/60 md:bg-card text-muted-foreground hover:bg-card/80 hover:text-foreground border border-border"
-                    }`}
-                >
-                  {category}
-                </button>
-              ))
-            )}
+          {/* MOBILE VIEW: Search & Dropdown (hidden on md+) */}
+          <div className="flex flex-col md:hidden space-y-3 mb-8">
+            <div className="relative group">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
+                <Search size={18} className="text-foreground/50" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search projects..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full h-[48px] pl-11 pr-4 bg-card/40 border border-border/50 rounded-[14px] text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/5 transition-all backdrop-blur-sm"
+              />
+            </div>
+
+            <CustomDropdown
+              options={dbCategories.map(cat => ({
+                label: cat === "All" ? "All Categories" : cat,
+                value: cat
+              }))}
+              value={activeCategory}
+              onChange={setActiveCategory}
+              className="h-[48px]"
+            />
+          </div>
+
+          {/* DESKTOP VIEW: Search & Horizontal Buttons (hidden on mobile) */}
+          <div className="hidden md:block">
+            <div className="mb-10 max-w-md mx-auto relative group">
+              <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
+                <Search size={20} className="text-foreground/50" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search projects by title, tag, or category..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 bg-card/40 border border-border/50 rounded-2xl text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:border-primary/50 focus:ring-4 focus:ring-primary/10 transition-all backdrop-blur-sm"
+              />
+            </div>
+
+            <div className="flex flex-wrap justify-center gap-3">
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <div key={i} className="w-32 h-11 bg-card/50 rounded-full animate-pulse border border-border/50" />
+                ))
+              ) : (
+                dbCategories.map((category) => (
+                  <button
+                    key={category}
+                    onClick={() => setActiveCategory(category)}
+                    className={`px-6 py-3 rounded-full text-sm font-medium transition-all duration-300 cursor-pointer border
+                      ${activeCategory === category
+                        ? "bg-primary text-primary-foreground border-primary shadow-lg shadow-primary/30"
+                        : "bg-card text-muted-foreground hover:bg-card/80 hover:text-foreground border-border"
+                      }`}
+                  >
+                    {category}
+                  </button>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -194,7 +244,7 @@ const OurWork = () => {
             Let's Build Your Brand
           </h2>
           <p className="text-[14px] leading-[1.6] text-muted-foreground/75 mb-6 max-w-[320px] mx-auto">
-            Ready to transform your brand? Let's create something extraordinary together. 
+            Ready to transform your brand? Let's create something extraordinary together.
             Our team is here to bring your vision to life.
           </p>
           <div className="flex justify-center">

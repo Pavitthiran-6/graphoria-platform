@@ -17,6 +17,7 @@ const Products = () => {
   const [dbProjects, setDbProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [filterCategory, setFilterCategory] = useState("All");
   const [categories, setCategories] = useState<{label: string, value: string}[]>([]);
 
   // Load projects from Supabase
@@ -106,60 +107,110 @@ const Products = () => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     
-    // Construct project object from form data using snake_case for Supabase
-    const projectData: any = {
-      cover_title: formData.get('Cover Title') as string,
-      cover_description: formData.get('Short Description (Cover Preview)') as string,
-      cover_tags: (formData.get('Cover Tags (Comma separated)') as string)?.split(',').map(t => t.trim()) || [],
-      category: selectedCategory, // Use the state from CustomDropdown
-      title: formData.get('Detail Page Title') as string,
-      slug: formData.get('URL Slug') as string,
-      description: formData.get('Full Detailed Description') as string,
-      client: formData.get('Client Name') as string,
-      problem: formData.get('The Challenge / Problem') as string,
-      goals: (formData.get('Project Goals (One per line)') as string)?.split('\n').filter(g => g.trim()) || [],
-      approach: {
-        research: formData.get('Research & Strategy') as string,
-        direction: formData.get('Creative Direction') as string,
-        execution: formData.get('Design Execution') as string,
-      },
-      results: {
-        impact: formData.get('Project Impact') as string,
-        brand_improvement: formData.get('Brand Improvement') as string,
-        positioning: formData.get('Market Positioning') as string,
-      },
-      testimonial: {
-        quote: formData.get('Quote') as string,
-        author: formData.get('Author Name') as string,
-        role: formData.get('Author Role') as string,
-      }
-    };
+    setLoading(true);
+    let coverImageUrl = editingProject?.cover_image || editingProject?.image || "";
+    let galleryUrls = editingProject?.gallery || [];
 
-    if (editingProject) {
-      const { error } = await supabase
-        .from('projects')
-        .update(projectData)
-        .eq('id', editingProject.id);
-      
-      if (error) {
-        toast.error("Error updating project: " + error.message);
-      } else {
+    try {
+      // 1. Upload Cover Image if a new one is selected
+      if (coverImage) {
+        const fileExt = coverImage.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, coverImage);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
+        
+        coverImageUrl = publicUrl;
+      }
+
+      // 2. Upload Gallery Images if any new ones are selected
+      if (galleryImages.length > 0) {
+        const newGalleryUrls = await Promise.all(
+          galleryImages.map(async (file) => {
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${Math.random()}.${fileExt}`;
+            const filePath = `products/gallery/${fileName}`;
+
+            const { error: uploadError } = await supabase.storage
+              .from('images')
+              .upload(filePath, file);
+
+            if (uploadError) throw uploadError;
+
+            const { data: { publicUrl } } = supabase.storage
+              .from('images')
+              .getPublicUrl(filePath);
+            
+            return publicUrl;
+          })
+        );
+        galleryUrls = [...galleryUrls, ...newGalleryUrls];
+      }
+
+      // 3. Construct project data
+      const projectData: any = {
+        cover_title: formData.get('Cover Title') as string,
+        cover_description: formData.get('Short Description (Cover Preview)') as string,
+        cover_tags: (formData.get('Cover Tags (Comma separated)') as string)?.split(',').map(t => t.trim()) || [],
+        category: selectedCategory,
+        title: formData.get('Detail Page Title') as string,
+        slug: formData.get('URL Slug') as string,
+        description: formData.get('Full Detailed Description') as string,
+        client: formData.get('Client Name') as string,
+        problem: formData.get('The Challenge / Problem') as string,
+        goals: (formData.get('Project Goals (One per line)') as string)?.split('\n').filter(g => g.trim()) || [],
+        approach: {
+          research: formData.get('Research & Strategy') as string,
+          direction: formData.get('Creative Direction') as string,
+          execution: formData.get('Design Execution') as string,
+        },
+        results: {
+          impact: formData.get('Project Impact') as string,
+          brand_improvement: formData.get('Brand Improvement') as string,
+          positioning: formData.get('Market Positioning') as string,
+        },
+        testimonial: {
+          quote: formData.get('Quote') as string,
+          author: formData.get('Author Name') as string,
+          role: formData.get('Author Role') as string,
+        },
+        cover_image: coverImageUrl,
+        image: coverImageUrl,
+        gallery: galleryUrls
+      };
+
+      if (editingProject) {
+        const { error } = await supabase
+          .from('projects')
+          .update(projectData)
+          .eq('id', editingProject.id);
+        
+        if (error) throw error;
         toast.success("Project updated successfully!");
-        fetchProjects();
-        handleCloseModal();
-      }
-    } else {
-      const { error } = await supabase
-        .from('projects')
-        .insert([projectData]);
-      
-      if (error) {
-        toast.error("Error adding project: " + error.message);
       } else {
+        const { error } = await supabase
+          .from('projects')
+          .insert([projectData]);
+        
+        if (error) throw error;
         toast.success("Project added successfully!");
-        fetchProjects();
-        handleCloseModal();
       }
+
+      fetchProjects();
+      handleCloseModal();
+    } catch (error: any) {
+      console.error("Submit error:", error);
+      toast.error("Error saving project: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -179,16 +230,23 @@ const Products = () => {
     }
   };
 
-  const filteredProjects = dbProjects.filter(p => 
-    p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.cover_title?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProjects = dbProjects.filter(p => {
+    const matchesSearch = 
+      p.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.cover_title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.client?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = filterCategory === "All" || p.category === filterCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative flex-1 max-w-md">
+        <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
           <Input 
             placeholder="Search projects..." 
@@ -197,12 +255,16 @@ const Products = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2">
-            <Filter size={18} />
-            Filter
-          </Button>
-          <Button className="gap-2" onClick={openAddModal}>
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+          <div className="w-full sm:w-48">
+            <CustomDropdown 
+              options={[{ label: "All Categories", value: "All" }, ...categories]}
+              value={filterCategory}
+              onChange={setFilterCategory}
+              placeholder="Filter by Category"
+            />
+          </div>
+          <Button className="w-full sm:w-auto gap-2 whitespace-nowrap" onClick={openAddModal}>
             <Plus size={18} />
             Add Project
           </Button>
@@ -480,9 +542,61 @@ const Products = () => {
         </form>
       </Modal>
 
-      {/* Table Section */}
+      {/* Table/Card Section */}
       <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
+        {/* MOBILE VIEW: Card List (hidden on sm+) */}
+        <div className="block sm:hidden divide-y divide-border">
+          {loading ? (
+            <div className="px-6 py-12 text-center text-muted-foreground animate-pulse">
+              Loading projects...
+            </div>
+          ) : filteredProjects.length === 0 ? (
+            <div className="px-6 py-12 text-center text-muted-foreground">
+              No projects found.
+            </div>
+          ) : (
+            filteredProjects.map((product) => (
+              <div key={product.id} className="p-4 flex flex-col gap-4">
+                <div className="flex gap-4">
+                  <div className="w-20 h-20 rounded-xl overflow-hidden bg-secondary border border-border flex-shrink-0 shadow-sm">
+                    <img 
+                      src={product.cover_image || product.image} 
+                      alt={product.cover_title || product.title} 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                  <div className="flex flex-col justify-between py-0.5">
+                    <div>
+                      <h3 className="font-bold text-foreground line-clamp-2 leading-tight mb-1">
+                        {product.cover_title || product.title}
+                      </h3>
+                      <span className="inline-block px-2.5 py-0.5 rounded-full bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+                        {product.category}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button 
+                        onClick={() => openEditModal(product)}
+                        className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-secondary text-xs font-medium text-foreground hover:text-primary transition-all border border-border"
+                      >
+                        <Edit size={14} /> Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(product.id)}
+                        className="p-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-destructive transition-colors border border-border"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* DESKTOP VIEW: Standard Table (hidden on mobile) */}
+        <div className="hidden sm:block overflow-x-auto">
           <table className="w-full text-left">
             <thead>
               <tr className="border-b border-border bg-secondary/30">
@@ -496,43 +610,47 @@ const Products = () => {
                 <tr>
                   <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">Loading projects...</td>
                 </tr>
-              ) : filteredProjects.map((product) => (
-                <tr key={product.id} className="hover:bg-secondary/20 transition-colors group">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary border border-border">
-                        <img src={product.cover_image || product.image} alt={product.cover_title || product.title} className="w-full h-full object-cover" />
-                      </div>
-                      <span className="font-medium text-foreground">{product.cover_title || product.title}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-                      {product.category}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button 
-                        onClick={() => openEditModal(product)}
-                        className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
-                      >
-                        <Edit size={18} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(product.id)}
-                        className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
-                      >
-                        <Trash2 size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {!loading && filteredProjects.length === 0 && (
-                <tr>
-                  <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">No projects found.</td>
-                </tr>
+              ) : (
+                <>
+                  {filteredProjects.map((product) => (
+                    <tr key={product.id} className="hover:bg-secondary/20 transition-colors group">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-lg overflow-hidden bg-secondary border border-border flex-shrink-0">
+                            <img src={product.cover_image || product.image} alt={product.cover_title || product.title} className="w-full h-full object-cover" />
+                          </div>
+                          <span className="font-medium text-foreground line-clamp-2">{product.cover_title || product.title}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium whitespace-nowrap">
+                          {product.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button 
+                            onClick={() => openEditModal(product)}
+                            className="p-2 text-muted-foreground hover:text-primary hover:bg-primary/10 rounded-lg transition-all"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button 
+                            onClick={() => handleDelete(product.id)}
+                            className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {!loading && filteredProjects.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="px-6 py-8 text-center text-muted-foreground">No projects found.</td>
+                    </tr>
+                  )}
+                </>
               )}
             </tbody>
           </table>

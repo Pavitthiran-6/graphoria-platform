@@ -5,6 +5,7 @@ export interface Project {
   slug: string;
   category: Category;
   cover_image: string;
+  gallery?: string[];
   cover_title: string;
   cover_description: string;
   cover_tags: string[];

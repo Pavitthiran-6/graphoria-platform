@@ -364,9 +364,9 @@ const Notifications = () => {
                 <div className="flex-1 min-w-0 space-y-4 w-full">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
                     <div className="min-w-0 flex-1">
-                      <h4 className="text-lg font-bold text-foreground flex items-center gap-3">
-                        {log.message}
-                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border ${styles.border} ${styles.bg} ${styles.text}`}>
+                      <h4 className="text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
+                        <span className="break-words flex-1 min-w-[200px]">{log.message}</span>
+                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border flex-shrink-0 ${styles.border} ${styles.bg} ${styles.text}`}>
                           {log.severity}
                         </span>
                       </h4>
@@ -385,7 +385,7 @@ const Notifications = () => {
                   </div>
 
                   {log.stack && (
-                    <div className="p-4 rounded-2xl bg-black/60 border border-white/5 font-mono text-[11px] text-muted-foreground/80 overflow-x-auto whitespace-pre">
+                    <div className="p-4 rounded-2xl bg-black/60 border border-white/5 font-mono text-[11px] text-muted-foreground/80 overflow-x-auto whitespace-pre-wrap break-all">
                       {log.stack}
                     </div>
                   )}

@@ -29,6 +29,7 @@ const HomeSwiper = () => {
     order_index: 0
   });
   const [tagInput, setTagInput] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   // Load items from Supabase on mount
   const fetchItems = async () => {
@@ -51,47 +52,73 @@ const HomeSwiper = () => {
   }, []);
 
   const handleSave = async () => {
-    if (!currentItem.image || !currentItem.title || !currentItem.description) {
-      toast.error("Please fill in all required fields (Image, Title, Description)");
+    if (!currentItem.image && !selectedFile) {
+      toast.error("Please select an image");
+      return;
+    }
+    if (!currentItem.title || !currentItem.description) {
+      toast.error("Please fill in all required fields (Title, Description)");
       return;
     }
 
-    const itemData = {
-      image: currentItem.image,
-      title: currentItem.title,
-      description: currentItem.description,
-      tags: currentItem.tags,
-      slug: currentItem.slug || "",
-      order_index: currentItem.order_index || 0
-    };
+    setLoading(true);
+    let imageUrl = currentItem.image || "";
 
-    if (currentItem.id) {
-      // Edit existing
-      const { error } = await supabase
-        .from('home_swiper')
-        .update(itemData)
-        .eq('id', currentItem.id);
-      
-      if (error) {
-        toast.error("Error updating swiper item: " + error.message);
-      } else {
+    try {
+      // 1. Upload new image if selected
+      if (selectedFile) {
+        const fileExt = selectedFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `swiper/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('images')
+          .upload(filePath, selectedFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
+        
+        imageUrl = publicUrl;
+      }
+
+      const itemData = {
+        image: imageUrl,
+        title: currentItem.title,
+        description: currentItem.description,
+        tags: currentItem.tags,
+        slug: currentItem.slug || "",
+        order_index: currentItem.order_index || 0
+      };
+
+      if (currentItem.id) {
+        // Edit existing
+        const { error } = await supabase
+          .from('home_swiper')
+          .update(itemData)
+          .eq('id', currentItem.id);
+        
+        if (error) throw error;
         toast.success("Swiper item updated successfully!");
-        fetchItems();
-        resetForm();
-      }
-    } else {
-      // Add new
-      const { error } = await supabase
-        .from('home_swiper')
-        .insert([itemData]);
-      
-      if (error) {
-        toast.error("Error adding swiper item: " + error.message);
       } else {
+        // Add new
+        const { error } = await supabase
+          .from('home_swiper')
+          .insert([itemData]);
+        
+        if (error) throw error;
         toast.success("New swiper item added!");
-        fetchItems();
-        resetForm();
       }
+
+      fetchItems();
+      resetForm();
+    } catch (error: any) {
+      console.error("Save error:", error);
+      toast.error("Error saving swiper item: " + error.message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,7 +153,7 @@ const HomeSwiper = () => {
       tags: [],
       order_index: 0
     });
-    setTagInput("");
+    setSelectedFile(null);
     setIsEditing(false);
   };
 
@@ -156,13 +183,15 @@ const HomeSwiper = () => {
       return;
     }
 
+    setSelectedFile(file);
+    
+    // For preview only
     const reader = new FileReader();
     reader.onloadend = () => {
       setCurrentItem({
         ...currentItem,
         image: reader.result as string,
       });
-      toast.success("Image uploaded successfully!");
     };
     reader.readAsDataURL(file);
   };

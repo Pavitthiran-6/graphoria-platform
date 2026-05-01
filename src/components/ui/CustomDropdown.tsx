@@ -53,7 +53,7 @@ const CustomDropdown = ({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           className={cn(
-            "w-full h-11 px-4 rounded-xl bg-secondary border border-border flex items-center justify-between text-sm transition-all focus:outline-none focus:border-primary/50",
+            "w-full h-12 px-4 rounded-[14px] bg-secondary border border-border flex items-center justify-between text-sm transition-all focus:outline-none focus:border-primary/50",
             isOpen && "border-primary/50 ring-1 ring-primary/20",
             !selectedOption && "text-muted-foreground"
           )}
