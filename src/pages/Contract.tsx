@@ -29,6 +29,7 @@ const ContractPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [countdown, setCountdown] = useState(5);
+  const [submittedPdfUrl, setSubmittedPdfUrl] = useState<string | null>(null);
   const contractPreviewRef = useRef<HTMLDivElement>(null);
   const contractPDFRef = useRef<HTMLDivElement>(null);
 
@@ -39,14 +40,15 @@ const ContractPage = () => {
         setCountdown((prev) => prev - 1);
       }, 1000);
     } else if (isSubmitted && countdown === 0) {
-      // Attempt to close window, fallback to redirect
-      window.close();
-      setTimeout(() => {
+      if (submittedPdfUrl) {
+        window.location.href = `https://docs.google.com/forms/d/e/1FAIpQLSfXn-f0I2HwBt883YYnM5l3l950IkdK8YMIsxKsaMDzAkEqIA/viewform?entry.962104102=${encodeURIComponent(submittedPdfUrl)}`;
+      } else {
+        // Fallback if URL is missing
         window.location.href = "about:blank";
-      }, 100);
+      }
     }
     return () => clearInterval(timer);
-  }, [isSubmitted, countdown]);
+  }, [isSubmitted, countdown, submittedPdfUrl]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -221,6 +223,7 @@ const ContractPage = () => {
       if (dbError) throw dbError;
 
       setIsSubmitted(true);
+      setSubmittedPdfUrl(publicUrl);
       toast.success('Contract signed and submitted successfully!');
     } catch (error: any) {
       console.error('Submission Error:', error);
