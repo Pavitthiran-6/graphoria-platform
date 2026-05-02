@@ -41,7 +41,7 @@ const ContractPage = () => {
       }, 1000);
     } else if (isSubmitted && countdown === 0) {
       if (submittedPdfUrl) {
-        window.location.href = `https://docs.google.com/forms/d/e/1FAIpQLSfXn-f0I2HwBt883YYnM5l3l950IkdK8YMIsxKsaMDzAkEqIA/viewform?entry.962104102=${encodeURIComponent(submittedPdfUrl)}`;
+        window.location.href = `https://docs.google.com/forms/d/e/1FAIpQLSfXn-f0I2HwBt883YYnM5l3l950IkdK8YMIsxKsaMDzAkEqIA/viewform?entry.524931158=${encodeURIComponent(submittedPdfUrl)}`;
       } else {
         // Fallback if URL is missing
         window.location.href = "about:blank";
