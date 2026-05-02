@@ -44,6 +44,25 @@ Deno.serve(async (req) => {
           </div>
         </div>
       `
+    } else if (table === 'contracts') {
+      subject = `📄 New Signed Contract: ${record.project_name}`
+      htmlContent = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #00ff88;">Contract Agreement Signed</h2>
+          <div style="background: #f9f9f9; padding: 20px; border-radius: 12px; border: 1px solid #eee;">
+            <p><strong>Project:</strong> <span style="font-size: 18px; font-weight: bold;">${record.project_name}</span></p>
+            <p><strong>Client:</strong> ${record.client_name}</p>
+            <p><strong>Budget:</strong> ₹${record.budget}</p>
+            <p><strong>Client Email:</strong> ${record.client_email}</p>
+            <p><strong>Client Phone:</strong> ${record.client_phone}</p>
+            <p><strong>Digital Signature:</strong> <span style="font-family: serif; font-style: italic; font-weight: bold;">${record.client_signature}</span></p>
+          </div>
+          <div style="margin-top: 25px; text-align: center;">
+            <a href="${record.pdf_url}" style="background: #00ff88; color: #000; padding: 15px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block;">View Signed PDF</a>
+          </div>
+          <p style="margin-top: 30px; font-size: 11px; color: #aaa; text-align: center;">Automated notification from Graphoria Contract System</p>
+        </div>
+      `
     } else {
       // Generic notification for any other table
       subject = `Graphoria Database Update: ${table}`

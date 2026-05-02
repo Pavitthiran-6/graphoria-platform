@@ -111,7 +111,7 @@ const Products = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    
+
     // Validation
     const coverTitle = formData.get("Cover Title") as string;
     const coverDesc = formData.get("Short Description (Cover Preview)") as string;

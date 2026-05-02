@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Bell, Check, Clock, Trash2, Mail, Phone, MessageSquare, Briefcase, IndianRupee, AlertTriangle, Terminal, Info, Globe, ShieldAlert } from "lucide-react";
+import { Bell, Check, Clock, Trash2, Mail, Phone, MessageSquare, Briefcase, IndianRupee, AlertTriangle, Terminal, Info, Globe, ShieldAlert, FileText, User, Smartphone, DollarSign, Download } from "lucide-react";
 import Button from "../components/Button";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -27,9 +27,23 @@ interface ErrorLog {
   severity: "error" | "warning" | "db" | "info";
 }
 
+interface Contract {
+  id: number;
+  created_at: string;
+  client_name: string;
+  client_email: string;
+  client_phone: string;
+  project_name: string;
+  budget: string;
+  client_signature: string;
+  pdf_url?: string;
+  is_read: boolean;
+}
+
 const Notifications = () => {
-  const [activeTab, setActiveTab] = useState<"inquiries" | "errors">("inquiries");
+  const [activeTab, setActiveTab] = useState<"inquiries" | "contracts" | "errors">("inquiries");
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,6 +61,20 @@ const Notifications = () => {
     }
   };
 
+  const fetchContracts = async () => {
+    const { data, error } = await supabase
+      .from("contracts")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching contracts:", error);
+      // Don't toast if table doesn't exist yet, just log
+    } else {
+      setContracts(data || []);
+    }
+  };
+
   const fetchErrorLogs = async () => {
     const { data, error } = await supabase
       .from("error_logs")
@@ -56,7 +84,6 @@ const Notifications = () => {
 
     if (error) {
       console.error("Error fetching logs:", error);
-      // Don't toast here as error_logs table might not exist yet
     } else {
       setErrorLogs(data || []);
     }
@@ -66,6 +93,8 @@ const Notifications = () => {
     setLoading(true);
     if (activeTab === "inquiries") {
       await fetchInquiries();
+    } else if (activeTab === "contracts") {
+      await fetchContracts();
     } else {
       await fetchErrorLogs();
     }
@@ -83,27 +112,38 @@ const Notifications = () => {
           .eq("is_read", false);
       };
       markAllReadOnVisit();
+    } else if (activeTab === "contracts") {
+      const markAllReadOnVisit = async () => {
+        await supabase
+          .from("contracts")
+          .update({ is_read: true })
+          .eq("is_read", false);
+      };
+      markAllReadOnVisit();
     }
   }, [activeTab]);
 
-  const markAsRead = async (id: number) => {
+  const markAsRead = async (id: number, table: "inquiries" | "contracts") => {
     const { error } = await supabase
-      .from("inquiries")
+      .from(table)
       .update({ is_read: true })
       .eq("id", id);
 
     if (error) {
       toast.error("Error updating status");
     } else {
-      setInquiries(prev => 
-        prev.map(item => item.id === id ? { ...item, is_read: true } : item)
-      );
+      if (table === "inquiries") {
+        setInquiries(prev => prev.map(item => item.id === id ? { ...item, is_read: true } : item));
+      } else {
+        setContracts(prev => prev.map(item => item.id === id ? { ...item, is_read: true } : item));
+      }
     }
   };
 
   const markAllAsRead = async () => {
+    const table = activeTab === "inquiries" ? "inquiries" : "contracts";
     const { error } = await supabase
-      .from("inquiries")
+      .from(table)
       .update({ is_read: true })
       .eq("is_read", false);
 
@@ -111,38 +151,40 @@ const Notifications = () => {
       toast.error("Error updating status");
     } else {
       toast.success("All marked as read");
-      fetchInquiries();
+      if (activeTab === "inquiries") fetchInquiries();
+      else fetchContracts();
     }
   };
 
-  const deleteInquiry = async (id: number) => {
-    if (!confirm("Are you sure you want to delete this inquiry?")) return;
+  const deleteItem = async (id: number, table: "inquiries" | "contracts") => {
+    if (!confirm(`Are you sure you want to delete this ${table === "inquiries" ? "inquiry" : "contract"}?`)) return;
 
     const { error } = await supabase
-      .from("inquiries")
+      .from(table)
       .delete()
       .eq("id", id);
 
     if (error) {
-      toast.error("Error deleting inquiry");
+      toast.error(`Error deleting ${table === "inquiries" ? "inquiry" : "contract"}`);
     } else {
-      toast.success("Inquiry deleted");
-      setInquiries(prev => prev.filter(item => item.id !== id));
+      toast.success(`${table === "inquiries" ? "Inquiry" : "Contract"} deleted`);
+      if (table === "inquiries") {
+        setInquiries(prev => prev.filter(item => item.id !== id));
+      } else {
+        setContracts(prev => prev.filter(item => item.id !== id));
+      }
     }
   };
 
   const clearLogs = async () => {
     if (!confirm("Are you sure you want to clear all error logs?")) return;
-    
-    // Deleting all requires a filter that matches all rows
     const { error } = await supabase
       .from("error_logs")
       .delete()
       .not("id", "is", null);
 
     if (error) {
-      console.error("Clear logs error:", error);
-      toast.error("Error clearing logs: " + error.message);
+      toast.error("Error clearing logs");
     } else {
       toast.success("All logs cleared");
       setErrorLogs([]);
@@ -152,265 +194,152 @@ const Notifications = () => {
   const getSeverityStyles = (severity: string) => {
     switch (severity) {
       case "error":
-        return { 
-          bg: "bg-destructive/10", 
-          text: "text-destructive", 
-          border: "border-destructive/20",
-          icon: <ShieldAlert size={20} />
-        };
+        return { bg: "bg-destructive/10", text: "text-destructive", border: "border-destructive/20", icon: <ShieldAlert size={20} /> };
       case "warning":
-        return { 
-          bg: "bg-amber-500/10", 
-          text: "text-amber-500", 
-          border: "border-amber-500/20",
-          icon: <AlertTriangle size={20} />
-        };
+        return { bg: "bg-amber-500/10", text: "text-amber-500", border: "border-amber-500/20", icon: <AlertTriangle size={20} /> };
       case "db":
-        return { 
-          bg: "bg-blue-500/10", 
-          text: "text-blue-500", 
-          border: "border-blue-500/20",
-          icon: <Terminal size={20} />
-        };
+        return { bg: "bg-blue-500/10", text: "text-blue-500", border: "border-blue-500/20", icon: <Terminal size={20} /> };
       default:
-        return { 
-          bg: "bg-primary/10", 
-          text: "text-primary", 
-          border: "border-primary/20",
-          icon: <Info size={20} />
-        };
+        return { bg: "bg-primary/10", text: "text-primary", border: "border-primary/20", icon: <Info size={20} /> };
     }
   };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500 pb-10 w-full max-w-full overflow-x-hidden">
       {/* Tab Switcher */}
-      <div className="flex p-1 bg-card border border-border rounded-2xl w-fit">
+      <div className="flex p-1 bg-card border border-border rounded-2xl w-fit overflow-x-auto no-scrollbar">
         <button
           onClick={() => setActiveTab("inquiries")}
-          className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
+          className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
             activeTab === "inquiries" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <MessageSquare size={18} />
           Inquiries
-          {inquiries.some(i => !i.is_read) && (
-            <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />
-          )}
+          {inquiries.some(i => !i.is_read) && <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />}
+        </button>
+        <button
+          onClick={() => setActiveTab("contracts")}
+          className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
+            activeTab === "contracts" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
+          }`}
+        >
+          <FileText size={18} />
+          Contracts
+          {contracts.some(c => !c.is_read) && <span className="w-2 h-2 rounded-full bg-destructive animate-pulse" />}
         </button>
         <button
           onClick={() => setActiveTab("errors")}
-          className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 flex items-center gap-2 ${
+          className={`px-4 sm:px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all duration-300 flex items-center gap-2 whitespace-nowrap ${
             activeTab === "errors" ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "text-muted-foreground hover:text-foreground"
           }`}
         >
           <Terminal size={18} />
-          System Errors
+          Errors
         </button>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
           <h2 className="text-2xl font-bold">
-            {activeTab === "inquiries" ? "Project Inquiries" : "System Monitoring"}
+            {activeTab === "inquiries" ? "Project Inquiries" : activeTab === "contracts" ? "Project Contracts" : "System Monitoring"}
           </h2>
           <p className="text-muted-foreground text-sm">
-            {activeTab === "inquiries" 
-              ? "Manage new client leads and messages." 
-              : "Track application stability and catch runtime failures."}
+            {activeTab === "inquiries" ? "Manage new client leads." : activeTab === "contracts" ? "Track project agreements and signatures." : "Application stability logs."}
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
-          {activeTab === "inquiries" ? (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={markAllAsRead}
-              className="gap-2 text-xs sm:text-sm px-3 sm:px-4 flex-1 sm:flex-initial justify-center"
-            >
-              <Check size={16} />
-              <span className="whitespace-nowrap">Mark all as read</span>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          {activeTab !== "errors" ? (
+            <Button variant="outline" size="sm" onClick={markAllAsRead} className="gap-2 text-xs flex-1 sm:flex-initial">
+              <Check size={16} /> Mark all read
             </Button>
           ) : (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={clearLogs}
-              className="gap-2 text-xs sm:text-sm px-3 sm:px-4 flex-1 sm:flex-initial justify-center text-destructive hover:bg-destructive/10"
-            >
-              <Trash2 size={16} />
-              <span className="whitespace-nowrap">Clear Logs</span>
+            <Button variant="outline" size="sm" onClick={clearLogs} className="gap-2 text-xs flex-1 sm:flex-initial text-destructive">
+              <Trash2 size={16} /> Clear Logs
             </Button>
           )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={refreshData}
-            className="gap-2 text-xs sm:text-sm px-3 sm:px-4 flex-1 sm:flex-initial justify-center"
-          >
-            <Clock size={16} />
-            <span className="whitespace-nowrap">Refresh</span>
+          <Button variant="outline" size="sm" onClick={refreshData} className="gap-2 text-xs flex-1 sm:flex-initial">
+            <Clock size={16} /> Refresh
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-6 w-full max-w-full">
+      <div className="grid gap-6 w-full">
         {loading ? (
           <div className="py-20 text-center text-muted-foreground">Loading...</div>
         ) : activeTab === "inquiries" ? (
           inquiries.map((inquiry) => (
-            <div 
-              key={inquiry.id} 
-              style={{ 
-                background: !inquiry.is_read ? 'linear-gradient(135deg, #031a0f, #02120a)' : undefined 
-              }}
-              className={`p-5 sm:p-7 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row gap-5 sm:gap-7 w-full max-w-full group ${
-                !inquiry.is_read 
-                  ? "border-[#00ff88]/20 shadow-[0_0_20px_rgba(0,255,136,0.15)] hover:shadow-[0_0_30px_rgba(0,255,136,0.25)]" 
-                  : "bg-card border-border hover:border-primary/10"
-              }`}
-            >
-              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${
-                !inquiry.is_read ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"
-              }`}>
-                <MessageSquare size={28} />
+            <div key={inquiry.id} className={`p-5 sm:p-7 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row gap-5 group ${!inquiry.is_read ? "border-primary/20 bg-primary/5" : "bg-card border-border"}`}>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${!inquiry.is_read ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}><MessageSquare size={28} /></div>
+              <div className="flex-1 min-w-0 space-y-5">
+                <div className="flex flex-col sm:flex-row justify-between gap-3">
+                  <div>
+                    <h4 className="text-xl font-bold flex items-center gap-3 truncate">{inquiry.full_name} {!inquiry.is_read && <span className="px-2 py-0.5 rounded-full bg-primary text-[9px] text-black font-black uppercase">New</span>}</h4>
+                    <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground"><span className="flex items-center gap-1.5"><Mail size={14} />{inquiry.email}</span><span className="flex items-center gap-1.5"><Phone size={14} />{inquiry.phone}</span></div>
+                  </div>
+                  <span className="text-xs text-muted-foreground flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg h-fit border border-white/5"><Clock size={14} />{formatDistanceToNow(new Date(inquiry.created_at), { addSuffix: true })}</span>
+                </div>
+                <div className="flex flex-wrap gap-2 text-xs"><span className="bg-secondary px-3 py-1 rounded-lg border border-border">Type: {inquiry.project_type}</span><span className="bg-secondary px-3 py-1 rounded-lg border border-border">Budget: ₹{inquiry.budget}</span></div>
+                <div className="p-4 rounded-2xl bg-black/20 border border-white/5 italic text-sm">"{inquiry.message}"</div>
+                <div className="pt-2 flex gap-4">{!inquiry.is_read && <button onClick={() => markAsRead(inquiry.id, "inquiries")} className="text-xs font-bold text-primary flex items-center gap-1.5"><Check size={14}/>Mark Read</button>}<button onClick={() => deleteItem(inquiry.id, "inquiries")} className="text-xs font-bold text-muted-foreground hover:text-destructive flex items-center gap-1.5"><Trash2 size={14}/>Delete</button></div>
               </div>
-              
-              <div className="flex-1 min-w-0 space-y-5 w-full">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-                  <div className="min-w-0 flex-1">
-                    <h4 className="text-xl font-bold text-foreground flex items-center gap-3 truncate">
-                      {inquiry.full_name}
-                      {!inquiry.is_read && (
-                        <span className="px-3 py-1 rounded-full bg-primary text-[10px] text-primary-foreground font-black uppercase tracking-widest flex-shrink-0 shadow-[0_0_10px_rgba(0,255,136,0.5)]">New</span>
-                      )}
-                    </h4>
-                    <div className="flex flex-wrap items-center gap-x-5 gap-y-2 mt-2">
-                      <span className="text-sm text-primary/80 flex items-center gap-2 break-all font-medium">
-                        <Mail size={16} className="shrink-0" />
-                        {inquiry.email}
-                      </span>
-                      {inquiry.phone && (
-                        <span className="text-sm text-primary/80 flex items-center gap-2 font-medium">
-                          <Phone size={16} className="shrink-0" />
-                          {inquiry.phone}
-                        </span>
-                      )}
-                    </div>
+            </div>
+          ))
+        ) : activeTab === "contracts" ? (
+          (contracts || []).map((contract) => (
+            <div key={contract.id} className={`p-5 sm:p-7 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row gap-5 group ${!contract.is_read ? "border-brand-green/20 bg-brand-green/5" : "bg-card border-border"}`}>
+              <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${!contract.is_read ? "bg-brand-green/20 text-brand-green" : "bg-secondary text-muted-foreground"}`}><FileText size={28} /></div>
+              <div className="flex-1 min-w-0 space-y-5">
+                <div className="flex flex-col sm:flex-row justify-between gap-3">
+                  <div>
+                    <h4 className="text-xl font-bold flex items-center gap-3 truncate">{contract.project_name} {!contract.is_read && <span className="px-2 py-0.5 rounded-full bg-brand-green text-[9px] text-black font-black uppercase">Signed</span>}</h4>
+                    <div className="flex flex-wrap gap-4 mt-1 text-sm text-muted-foreground"><span className="flex items-center gap-1.5"><User size={14} />{contract.client_name}</span><span className="flex items-center gap-1.5"><Smartphone size={14} />{contract.client_phone}</span></div>
                   </div>
-                  <span className="text-xs text-muted-foreground flex items-center gap-2 bg-black/40 px-4 py-2 rounded-xl whitespace-nowrap self-start sm:self-center border border-white/5 font-medium">
-                    <Clock size={14} />
-                    {formatDistanceToNow(new Date(inquiry.created_at), { addSuffix: true })}
-                  </span>
+                  <span className="text-xs text-muted-foreground flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg h-fit border border-white/5"><Clock size={14} />{formatDistanceToNow(new Date(contract.created_at), { addSuffix: true })}</span>
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <div className="flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-background border border-border text-[10px] sm:text-xs font-medium">
-                    <Briefcase size={12} className="text-primary shrink-0" />
-                    <span className="text-muted-foreground">Type:</span> {inquiry.project_type}
-                  </div>
-                  {inquiry.budget && (
-                    <div className="flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl bg-background border border-border text-[10px] sm:text-xs font-medium">
-                      <IndianRupee size={12} className="text-primary shrink-0" />
-                      <span className="text-muted-foreground">Budget:</span> {inquiry.budget}
-                    </div>
-                  )}
-                </div>
-
-                <div className="p-3 sm:p-4 rounded-2xl bg-secondary/30 border border-border/50 text-[13px] sm:text-sm text-foreground/90 italic leading-relaxed break-words">
-                  "{inquiry.message}"
-                </div>
-
-                <div className="pt-2 flex flex-wrap items-center gap-2 sm:gap-4 border-t border-border/30 mt-2">
-                  {!inquiry.is_read && (
-                    <button 
-                      onClick={() => markAsRead(inquiry.id)}
-                      className="text-[10px] sm:text-xs font-bold text-primary hover:bg-primary/10 px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all flex items-center gap-1.5"
+                <div className="flex flex-wrap gap-2 text-xs"><span className="bg-secondary px-3 py-1 rounded-lg border border-border flex items-center gap-1.5">₹ Budget: {contract.budget}</span><span className="bg-secondary px-3 py-1 rounded-lg border border-border flex items-center gap-1.5"><Check size={12}/>Signed as: <span className="italic font-serif font-bold text-brand-green">{contract.client_signature}</span></span></div>
+                <div className="pt-2 flex flex-wrap gap-4">
+                  {!contract.is_read && <button onClick={() => markAsRead(contract.id, "contracts")} className="text-xs font-bold text-brand-green flex items-center gap-1.5 transition-colors hover:bg-brand-green/10 px-2 py-1 rounded"><Check size={14}/>Mark Read</button>}
+                  {contract.pdf_url && (
+                    <a 
+                      href={contract.pdf_url} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-xs font-bold text-blue-400 flex items-center gap-1.5 transition-colors hover:bg-blue-400/10 px-2 py-1 rounded"
                     >
-                      <Check size={12} />
-                      Mark as Read
-                    </button>
+                      <Download size={14}/> View Signed PDF
+                    </a>
                   )}
-                  <button 
-                    onClick={() => deleteInquiry(inquiry.id)}
-                    className="text-[10px] sm:text-xs font-bold text-muted-foreground hover:text-destructive px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all flex items-center gap-1.5"
-                  >
-                    <Trash2 size={12} />
-                    Delete
-                  </button>
-                  <a 
-                    href={`mailto:${inquiry.email}`}
-                    className="text-[10px] sm:text-xs font-bold text-muted-foreground hover:text-primary px-2 sm:px-3 py-1.5 sm:py-2 rounded-lg transition-all flex items-center gap-1.5"
-                  >
-                    <Mail size={12} />
-                    Reply
-                  </a>
+                  <button onClick={() => deleteItem(contract.id, "contracts")} className="text-xs font-bold text-muted-foreground hover:text-destructive flex items-center gap-1.5 transition-colors px-2 py-1 rounded"><Trash2 size={14}/>Delete</button>
+                  <a href={`mailto:${contract.client_email}`} className="text-xs font-bold text-muted-foreground hover:text-primary flex items-center gap-1.5 transition-colors px-2 py-1 rounded"><Mail size={14}/>Email Client</a>
                 </div>
               </div>
             </div>
           ))
         ) : (
-          errorLogs.map((log) => {
+          (errorLogs || []).map((log) => {
             const styles = getSeverityStyles(log.severity);
             return (
-              <div 
-                key={log.id} 
-                className="p-5 sm:p-7 rounded-3xl bg-card border border-border hover:border-primary/10 transition-all duration-500 flex flex-col md:flex-row gap-5 sm:gap-7 w-full max-w-full"
-              >
-                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${styles.bg} ${styles.text} border ${styles.border}`}>
-                  {styles.icon}
-                </div>
-                
-                <div className="flex-1 min-w-0 space-y-4 w-full">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full">
-                    <div className="min-w-0 flex-1">
-                      <h4 className="text-lg font-bold text-foreground flex flex-wrap items-center gap-2">
-                        <span className="break-words flex-1 min-w-[200px]">{log.message}</span>
-                        <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest border flex-shrink-0 ${styles.border} ${styles.bg} ${styles.text}`}>
-                          {log.severity}
-                        </span>
-                      </h4>
-                    </div>
-                    <span className="text-xs text-muted-foreground flex items-center gap-2 bg-black/40 px-4 py-2 rounded-xl whitespace-nowrap self-start sm:self-center border border-white/5">
-                      <Clock size={14} />
-                      {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
-                    </span>
+              <div key={log.id} className="p-5 sm:p-7 rounded-3xl bg-card border border-border flex flex-col md:flex-row gap-5">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${styles.bg} ${styles.text} border ${styles.border}`}>{styles.icon}</div>
+                <div className="flex-1 min-w-0 space-y-4">
+                  <div className="flex flex-col sm:flex-row justify-between gap-3">
+                    <h4 className="text-lg font-bold truncate flex-1">{log.message}</h4>
+                    <span className="text-xs text-muted-foreground flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg border border-white/5 whitespace-nowrap"><Clock size={14} />{formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}</span>
                   </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <Globe size={14} className="text-primary/60" />
-                      <span className="font-mono bg-secondary/50 px-2 py-1 rounded-md">{log.path}</span>
-                    </div>
-                  </div>
-
-                  {log.stack && (
-                    <div className="p-4 rounded-2xl bg-black/60 border border-white/5 font-mono text-[11px] text-muted-foreground/80 overflow-x-auto whitespace-pre-wrap break-all">
-                      {log.stack}
-                    </div>
-                  )}
+                  <div className="font-mono text-[10px] bg-secondary/50 px-2 py-1 rounded w-fit">{log.path}</div>
+                  {log.stack && <div className="p-4 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px] text-muted-foreground/80 overflow-x-auto">{log.stack}</div>}
                 </div>
               </div>
             );
           })
         )}
       </div>
-      
-      {!loading && ((activeTab === "inquiries" && inquiries.length === 0) || (activeTab === "errors" && errorLogs.length === 0)) && (
+
+      {!loading && ((activeTab === "inquiries" && inquiries.length === 0) || (activeTab === "contracts" && contracts.length === 0) || (activeTab === "errors" && errorLogs.length === 0)) && (
         <div className="py-20 text-center space-y-4 bg-card border border-dashed border-border rounded-3xl">
-          <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto text-muted-foreground/30">
-            {activeTab === "inquiries" ? <Bell size={40} /> : <Terminal size={40} />}
-          </div>
-          <div className="space-y-1">
-            <h3 className="font-bold text-foreground">
-              {activeTab === "inquiries" ? "No inquiries yet" : "No errors detected"}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {activeTab === "inquiries" 
-                ? "When clients fill out the contact form, they'll appear here." 
-                : "Your application is currently stable."}
-            </p>
-          </div>
+          <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto text-muted-foreground/30">{activeTab === "inquiries" ? <MessageSquare size={40} /> : activeTab === "contracts" ? <FileText size={40} /> : <Terminal size={40} />}</div>
+          <h3 className="font-bold text-foreground">No {activeTab} yet</h3>
         </div>
       )}
     </div>
@@ -418,3 +347,4 @@ const Notifications = () => {
 };
 
 export default Notifications;
+

@@ -10,6 +10,7 @@ import AboutUs from "./pages/AboutUs";
 import OurWork from "./pages/OurWork";
 import OurApproach from "./pages/OurApproach";
 import Contact from "./pages/Contact";
+import Contract from "./pages/Contract";
 import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
@@ -22,12 +23,13 @@ const AppContent = () => {
   const isAdminPath = location.pathname.startsWith('/admin');
   
   // Define all valid paths (excluding dynamic project paths for now)
-  const staticPaths = ['/', '/about', '/our-work', '/our-approach', '/contact'];
+  const staticPaths = ['/', '/about', '/our-work', '/our-approach', '/contact', '/contract'];
   const isStaticPath = staticPaths.includes(location.pathname);
   const isProjectDetailPath = location.pathname.startsWith('/project/');
   
   const isKnownPath = isStaticPath || isProjectDetailPath || isAdminPath;
-  const showNavbar = isKnownPath && !isAdminPath;
+  const isContractPath = location.pathname === '/contract';
+  const showNavbar = isKnownPath && !isAdminPath && !isContractPath;
 
   return (
     <>
@@ -39,6 +41,7 @@ const AppContent = () => {
         <Route path="/our-work" element={<OurWork />} />
         <Route path="/our-approach" element={<OurApproach />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/contract" element={<Contract />} />
         <Route path="/project/:slug" element={<ProjectDetail />} />
         
         {/* Admin Routes */}
