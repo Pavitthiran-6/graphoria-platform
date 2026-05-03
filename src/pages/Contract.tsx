@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { toast } from 'sonner';
-import { Download, Send, FileText, CheckCircle, Briefcase, User, Mail, DollarSign, FileEdit } from 'lucide-react';
+import { Download, Send, FileText, CheckCircle, Briefcase, User, Mail, IndianRupee, FileEdit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -336,7 +336,7 @@ const ContractPage = () => {
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-semibold flex items-center text-slate-300">
-                  <DollarSign className="w-4 h-4 mr-2 text-brand-green/70" /> Budget (INR)
+                  <IndianRupee className="w-4 h-4 mr-2 text-brand-green/70" /> Budget (INR)
                 </label>
                 <Input 
                   name="budget"
@@ -449,8 +449,8 @@ const ContractPage = () => {
                 <h5 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Project Overview</h5>
                 <h4 className="text-xl font-bold text-slate-900 mb-2">{formData.projectName || '[Project Name]'}</h4>
                 <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
-                  <span className="text-base font-semibold">Total Budget:</span>
-                  <span className="text-xl font-bold text-slate-900 text-brand-green bg-black px-3 py-1 rounded">₹{formData.budget || '0'}</span>
+                  <span className="text-base font-semibold text-slate-700">Total Budget:</span>
+                  <span className="text-base font-bold text-slate-900">₹{formData.budget || '0'}</span>
                 </div>
               </div>
 
@@ -548,8 +548,8 @@ const ContractPage = () => {
                 <h5 className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Project Overview</h5>
                 <h4 className="text-base sm:text-lg font-bold text-slate-900 mb-2">{formData.projectName || '[Project Name]'}</h4>
                 <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
-                  <span className="text-xs sm:text-sm font-semibold">Total Budget:</span>
-                  <span className="text-base sm:text-lg font-bold text-slate-900 text-brand-green bg-black px-2 py-1 rounded">₹{formData.budget || '0'}</span>
+                  <span className="text-xs sm:text-sm font-semibold text-slate-700">Total Budget:</span>
+                  <span className="text-xs sm:text-sm font-bold text-slate-900">₹{formData.budget || '0'}</span>
                 </div>
               </div>
 

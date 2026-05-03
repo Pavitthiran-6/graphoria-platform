@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Bell, Check, Clock, Trash2, Mail, Phone, MessageSquare, Briefcase, IndianRupee, AlertTriangle, Terminal, Info, Globe, ShieldAlert, FileText, User, Smartphone, DollarSign, Download } from "lucide-react";
+import { Bell, Check, Clock, Trash2, Mail, Phone, MessageSquare, Briefcase, IndianRupee, AlertTriangle, Terminal, Info, Globe, ShieldAlert, FileText, User, Smartphone, Download } from "lucide-react";
 import Button from "../components/Button";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -279,7 +279,10 @@ const Notifications = () => {
                   </div>
                   <span className="text-xs text-muted-foreground flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg h-fit border border-white/5"><Clock size={14} />{formatDistanceToNow(new Date(inquiry.created_at), { addSuffix: true })}</span>
                 </div>
-                <div className="flex flex-wrap gap-2 text-xs"><span className="bg-secondary px-3 py-1 rounded-lg border border-border">Type: {inquiry.project_type}</span><span className="bg-secondary px-3 py-1 rounded-lg border border-border">Budget: ₹{inquiry.budget}</span></div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="bg-secondary px-3 py-1 rounded-lg border border-border">Type: {inquiry.project_type}</span>
+                  <span className="bg-secondary px-3 py-1 rounded-lg border border-border font-bold flex items-center gap-1.5"><IndianRupee size={12}/>{inquiry.budget}</span>
+                </div>
                 <div className="p-4 rounded-2xl bg-black/20 border border-white/5 italic text-sm">"{inquiry.message}"</div>
                 <div className="pt-2 flex gap-4">{!inquiry.is_read && <button onClick={() => markAsRead(inquiry.id, "inquiries")} className="text-xs font-bold text-primary flex items-center gap-1.5"><Check size={14}/>Mark Read</button>}<button onClick={() => deleteItem(inquiry.id, "inquiries")} className="text-xs font-bold text-muted-foreground hover:text-destructive flex items-center gap-1.5"><Trash2 size={14}/>Delete</button></div>
               </div>
@@ -297,7 +300,10 @@ const Notifications = () => {
                   </div>
                   <span className="text-xs text-muted-foreground flex items-center gap-2 bg-black/20 px-3 py-1.5 rounded-lg h-fit border border-white/5"><Clock size={14} />{formatDistanceToNow(new Date(contract.created_at), { addSuffix: true })}</span>
                 </div>
-                <div className="flex flex-wrap gap-2 text-xs"><span className="bg-secondary px-3 py-1 rounded-lg border border-border flex items-center gap-1.5">₹ Budget: {contract.budget}</span><span className="bg-secondary px-3 py-1 rounded-lg border border-border flex items-center gap-1.5"><Check size={12}/>Signed as: <span className="italic font-serif font-bold text-brand-green">{contract.client_signature}</span></span></div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="bg-secondary px-3 py-1 rounded-lg border border-border font-bold flex items-center gap-1.5"><IndianRupee size={12}/>Budget: {contract.budget}</span>
+                  <span className="bg-secondary px-3 py-1 rounded-lg border border-border flex items-center gap-1.5"><Check size={12}/>Signed: <span className="italic font-serif font-bold text-brand-green">{contract.client_signature}</span></span>
+                </div>
                 <div className="pt-2 flex flex-wrap gap-4">
                   {!contract.is_read && <button onClick={() => markAsRead(contract.id, "contracts")} className="text-xs font-bold text-brand-green flex items-center gap-1.5 transition-colors hover:bg-brand-green/10 px-2 py-1 rounded"><Check size={14}/>Mark Read</button>}
                   {contract.pdf_url && (
