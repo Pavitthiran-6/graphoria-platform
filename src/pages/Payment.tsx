@@ -8,18 +8,18 @@ import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from "@/lib/supabase";
-import { 
-  Copy, 
-  CheckCircle2, 
-  CreditCard, 
-  QrCode, 
-  ArrowRight, 
-  ShieldCheck, 
-  Info, 
-  Loader2, 
-  Mail, 
-  CheckCircle, 
-  Clock, 
+import {
+  Copy,
+  CheckCircle2,
+  CreditCard,
+  QrCode,
+  ArrowRight,
+  ShieldCheck,
+  Info,
+  Loader2,
+  Mail,
+  CheckCircle,
+  Clock,
   Zap,
   AlertTriangle,
   Home,
@@ -38,8 +38,26 @@ const PaymentPage = () => {
   const [touched, setTouched] = useState(false);
   const [loading, setLoading] = useState(true);
   const [paymentData, setPaymentData] = useState<any>(null);
-  const [error, setError] = useState<{title: string, message: string} | null>(null);
+  const [error, setError] = useState<{ title: string, message: string } | null>(null);
   const [timeLeft, setTimeLeft] = useState<string>('');
+
+  const [closeCountdown, setCloseCountdown] = useState(5);
+
+  useEffect(() => {
+    if (isSubmitted) {
+      const timer = setInterval(() => {
+        setCloseCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            window.close();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [isSubmitted]);
 
   useEffect(() => {
     fetchPaymentData();
@@ -73,7 +91,7 @@ const PaymentPage = () => {
 
   const fetchPaymentData = async () => {
     if (!invoiceId) return;
-    
+
     setLoading(true);
     try {
       // Split invoiceId-token (format: INV-123456-abcdefgh)
@@ -81,7 +99,7 @@ const PaymentPage = () => {
       if (parts.length < 3) {
         throw new Error("Invalid link structure");
       }
-      
+
       const tokenFromUrl = parts.pop();
       const invIdOnly = parts.join('-');
 
@@ -141,19 +159,19 @@ const PaymentPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setTouched(true);
-    
+
     if (!transactionId.trim() || transactionId.length < 8) {
       toast.error("Please enter a valid Transaction ID");
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const { error } = await supabase
         .from('payments')
-        .update({ 
-          status: 'paid', 
-          transaction_id: transactionId 
+        .update({
+          status: 'paid',
+          transaction_id: transactionId
         })
         .eq('invoice_id', paymentData.invoice_id);
 
@@ -197,7 +215,7 @@ const PaymentPage = () => {
 
   if (error || !paymentData) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-[#030712] flex flex-col items-center justify-center p-4">
         <Card className="max-w-md w-full border border-red-500/20 bg-slate-900/60 backdrop-blur-xl p-8 text-center space-y-6 rounded-3xl">
           <div className="w-20 h-20 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
             <Lock className="w-10 h-10 text-red-500" />
@@ -223,31 +241,47 @@ const PaymentPage = () => {
 
   if (isSubmitted) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4 font-sans relative overflow-hidden">
+      <div className="min-h-screen bg-[#030712] flex items-center justify-center p-4 font-sans relative overflow-hidden">
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] bg-brand-green/10 rounded-full blur-[100px] pointer-events-none" />
-        
+
         <Card className="max-w-md w-full border border-white/5 bg-slate-900/60 backdrop-blur-xl shadow-2xl animate-in zoom-in fade-in duration-500 rounded-3xl relative z-10">
-          <CardContent className="pt-16 pb-16 px-10 text-center space-y-6">
+          <CardContent className="pt-16 pb-12 px-10 text-center space-y-6">
             <div className="w-24 h-24 bg-brand-green/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_40px_rgba(151,255,0,0.15)]">
               <CheckCircle2 className="w-12 h-12 text-brand-green" />
             </div>
-            <h2 className="text-2xl font-bold text-white">✅ Payment Received</h2>
-            <p className="text-slate-400 leading-relaxed text-sm">
-              We've received your transaction details for ID: <span className="font-mono font-bold text-white bg-white/5 px-2 py-0.5 rounded border border-white/10 ml-1 break-all">{transactionId}</span>.
-            </p>
+            <div className="space-y-4">
+              <h2 className="text-2xl font-bold text-white">Payment Received</h2>
+              <p className="text-slate-400 leading-relaxed text-sm">
+                We've received your transaction details.
+              </p>
+              <div className="flex flex-col items-center gap-1.5 pt-2">
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Transaction ID</span>
+                <div className="font-mono font-bold text-white bg-white/5 px-4 py-2 rounded-xl border border-white/10 break-all max-w-full">
+                  {transactionId}
+                </div>
+              </div>
+            </div>
             <div className="bg-white/5 p-4 rounded-2xl border border-white/5 space-y-1">
               <p className="text-slate-500 text-[10px] uppercase font-black tracking-widest">Amount Secured</p>
               <p className="text-xl font-bold text-brand-green">₹{paymentData.advance_amount.toLocaleString()}</p>
             </div>
-            <p className="text-slate-500 text-xs">
-              Your project kickoff process is now underway.
-            </p>
-            <div className="pt-8">
-              <Button 
-                onClick={() => window.location.href = '/'}
+
+            <div className="flex flex-col items-center gap-2 pt-4">
+              <p className="text-slate-500 text-xs">
+                Your project kickoff process is now underway.
+              </p>
+              <div className="flex items-center gap-2 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                <span className="w-2 h-2 bg-brand-green rounded-full animate-pulse" />
+                <span className="text-[10px] text-slate-400 font-medium">Closing in {closeCountdown}s</span>
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <Button
+                onClick={() => window.close()}
                 className="w-full h-12 bg-white hover:bg-slate-100 text-black rounded-xl font-bold transition-all transform hover:scale-[1.02] active:scale-[0.98]"
               >
-                Return to Home
+                Close Now
               </Button>
             </div>
           </CardContent>
@@ -308,7 +342,7 @@ const PaymentPage = () => {
                   {paymentData.invoice_id}
                 </div>
                 <p className="text-[9px] text-slate-600 mt-2 font-medium flex items-center gap-1.5 sm:justify-end">
-                   Protected by Token <ShieldCheck className="w-3 h-3 text-brand-green" />
+                  Protected by Token <ShieldCheck className="w-3 h-3 text-brand-green" />
                 </p>
               </div>
             </div>
@@ -349,9 +383,9 @@ const PaymentPage = () => {
                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-[0.2em]">Scan to Pay</p>
                 <div className="bg-white p-4 sm:p-5 rounded-2xl sm:rounded-[24px] shadow-[0_0_40px_rgba(255,255,255,0.05)] transform hover:scale-105 transition-transform duration-500">
                   <div className="w-36 h-36 sm:w-40 sm:h-40 bg-white flex items-center justify-center">
-                    <img 
-                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(upiPayUrl)}`} 
-                      alt="Payment QR Code" 
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encodeURIComponent(upiPayUrl)}`}
+                      alt="Payment QR Code"
                       className="w-full h-full p-1"
                     />
                   </div>
@@ -370,9 +404,9 @@ const PaymentPage = () => {
                       <div className="flex-1 bg-black/60 border border-white/10 h-12 px-4 rounded-xl flex items-center font-mono text-sm text-slate-300 group-hover:border-white/20 transition-colors overflow-hidden truncate">
                         graphoria.design@upi
                       </div>
-                      <Button 
-                        variant="outline" 
-                        size="default" 
+                      <Button
+                        variant="outline"
+                        size="default"
                         onClick={handleCopyUpi}
                         className={`h-12 rounded-xl transition-all border-white/10 shrink-0 flex items-center justify-center gap-2 sm:w-auto w-full ${isCopying ? 'bg-brand-green/10 border-brand-green/50 text-brand-green' : 'bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 hover:border-white/20'}`}
                       >
@@ -383,7 +417,7 @@ const PaymentPage = () => {
                   </div>
                   <p className="text-[10px] text-brand-green/60 font-medium text-center sm:text-left">Ensure the name shows as <span className="font-bold underline">Graphoria Design</span></p>
                 </div>
-                
+
                 <div className="p-4 bg-white/[0.03] rounded-2xl border border-white/5 flex gap-3 shadow-sm">
                   <div className="shrink-0 mt-0.5">
                     <Info className="w-3.5 h-3.5 text-slate-400" />
@@ -414,17 +448,16 @@ const PaymentPage = () => {
               <div className="space-y-3">
                 <Label htmlFor="transactionId" className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Transaction / Reference ID</Label>
                 <div className="relative">
-                  <Input 
+                  <Input
                     id="transactionId"
                     placeholder="Enter Transaction ID"
                     value={transactionId}
                     onChange={(e) => setTransactionId(e.target.value)}
                     onBlur={() => setTouched(true)}
-                    className={`h-12 sm:h-14 bg-black/60 rounded-xl sm:rounded-[16px] transition-all duration-300 text-sm text-white placeholder:text-slate-700 px-5 shadow-inner ${
-                      isInvalid ? 'border-red-500/50 focus:ring-red-500/10' : 
-                      isValid ? 'border-brand-green/50 focus:ring-brand-green/10 shadow-[0_0_15px_rgba(151,255,0,0.05)]' : 
-                      'border-white/10 focus:border-white/30 focus:ring-white/5'
-                    }`}
+                    className={`h-12 sm:h-14 bg-black/60 rounded-xl sm:rounded-[16px] transition-all duration-300 text-sm text-white placeholder:text-slate-700 px-5 shadow-inner ${isInvalid ? 'border-red-500/50 focus:ring-red-500/10' :
+                        isValid ? 'border-brand-green/50 focus:ring-brand-green/10 shadow-[0_0_15px_rgba(151,255,0,0.05)]' :
+                          'border-white/10 focus:border-white/30 focus:ring-white/5'
+                      }`}
                   />
                   {isValid && <CheckCircle className="w-4 h-4 text-brand-green absolute right-5 top-1/2 -translate-y-1/2 animate-in fade-in zoom-in" />}
                 </div>
@@ -434,12 +467,11 @@ const PaymentPage = () => {
               </div>
 
               <div className="pt-2">
-                <Button 
+                <Button
                   type="submit"
                   disabled={!transactionId.trim() || isSubmitting}
-                  className={`w-full h-12 sm:h-14 rounded-xl sm:rounded-[18px] font-black uppercase tracking-wider sm:tracking-widest text-[10px] sm:text-xs shadow-xl transition-all duration-500 flex items-center justify-center gap-2 sm:gap-3 ${
-                    isValid ? 'bg-brand-green text-black hover:scale-[1.01] hover:shadow-brand-green/20' : 'bg-white/5 text-slate-600 border border-white/5'
-                  }`}
+                  className={`w-full h-12 sm:h-14 rounded-xl sm:rounded-[18px] font-black uppercase tracking-wider sm:tracking-widest text-[10px] sm:text-xs shadow-xl transition-all duration-500 flex items-center justify-center gap-2 sm:gap-3 ${isValid ? 'bg-brand-green text-black hover:scale-[1.01] hover:shadow-brand-green/20' : 'bg-white/5 text-slate-600 border border-white/5'
+                    }`}
                 >
                   {isSubmitting ? (
                     <>

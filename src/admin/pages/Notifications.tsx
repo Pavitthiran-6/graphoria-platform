@@ -18,12 +18,15 @@ import {
   Hash,
   ArrowRight,
   RefreshCw,
-  XCircle
+  XCircle,
+  FileCheck
 } from "lucide-react";
 import Button from "../components/Button";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface Inquiry {
   id: number;
@@ -64,7 +67,10 @@ interface PaymentRecord {
   id: string;
   invoice_id: string;
   client_name: string;
+  client_email?: string;
   project_name: string;
+  service?: string;
+  total_amount: number;
   advance_amount: number;
   transaction_id: string;
   status: string;
@@ -73,10 +79,11 @@ interface PaymentRecord {
 }
 
 const Notifications = () => {
-  const [activeTab, setActiveTab] = useState<"inquiries" | "contracts" | "payments" | "errors">("inquiries");
+  const [activeTab, setActiveTab] = useState<"inquiries" | "contracts" | "payments" | "invoices" | "errors">("inquiries");
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [invoices, setInvoices] = useState<PaymentRecord[]>([]);
   const [errorLogs, setErrorLogs] = useState<ErrorLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -113,11 +120,12 @@ const Notifications = () => {
       const { data, error } = await supabase
         .from("payments")
         .select("*")
-        .eq("status", "paid")
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       setPayments(data || []);
+      // Filter for invoices tab
+      setInvoices(data?.filter(p => p.status === "paid") || []);
     } catch (error) {
       console.error("Error fetching payments:", error);
     }
@@ -142,7 +150,7 @@ const Notifications = () => {
     setLoading(true);
     if (activeTab === "inquiries") await fetchInquiries();
     else if (activeTab === "contracts") await fetchContracts();
-    else if (activeTab === "payments") await fetchPayments();
+    else if (activeTab === "payments" || activeTab === "invoices") await fetchPayments();
     else await fetchErrorLogs();
     setLoading(false);
   };
@@ -151,7 +159,7 @@ const Notifications = () => {
     refreshData();
 
     const markAsReadEffect = async () => {
-      const table = activeTab === "inquiries" ? "inquiries" : activeTab === "contracts" ? "contracts" : activeTab === "payments" ? "payments" : null;
+      const table = activeTab === "inquiries" ? "inquiries" : activeTab === "contracts" ? "contracts" : (activeTab === "payments" || activeTab === "invoices") ? "payments" : null;
       if (!table) return;
 
       try {
@@ -182,6 +190,7 @@ const Notifications = () => {
         setContracts(prev => prev.map(item => item.id === id ? { ...item, is_read: true } : item));
       } else {
         setPayments(prev => prev.map(item => item.id === id ? { ...item, is_read: true } : item));
+        setInvoices(prev => prev.map(item => item.id === id ? { ...item, is_read: true } : item));
       }
     } catch (error) {
       toast.error("Error updating status");
@@ -202,29 +211,29 @@ const Notifications = () => {
       toast.success(`${table.charAt(0).toUpperCase() + table.slice(1, -1)} deleted`);
       if (table === "inquiries") setInquiries(prev => prev.filter(item => item.id !== id));
       else if (table === "contracts") setContracts(prev => prev.filter(item => item.id !== id));
-      else setPayments(prev => prev.filter(item => item.id !== id));
+      else {
+        setPayments(prev => prev.filter(item => item.id !== id));
+        setInvoices(prev => prev.filter(item => item.id !== id));
+      }
     } catch (error) {
       toast.error("Error deleting item");
     }
   };
 
   const clearAll = async () => {
-    const currentTable = activeTab === "inquiries" ? "inquiries" : activeTab === "contracts" ? "contracts" : activeTab === "payments" ? "payments" : "error_logs";
+    const currentTable = activeTab === "inquiries" ? "inquiries" : activeTab === "contracts" ? "contracts" : (activeTab === "payments" || activeTab === "invoices") ? "payments" : "error_logs";
     
     if (!confirm(`Are you sure you want to clear ALL ${activeTab}? This action cannot be undone.`)) return;
 
     setLoading(true);
     try {
-      // For payments, we only want to clear the 'paid' ones that are visible
       let query = supabase.from(currentTable).delete();
       
-      if (activeTab === "payments") {
+      if (activeTab === "invoices") {
         query = query.eq("status", "paid");
-      } else if (activeTab === "errors") {
-        // Just delete everything for errors
-        query = query.neq("id", 0); // Hack to delete all rows
       } else {
-        query = query.neq("id", 0);
+        // Universal match for all IDs (works for both Integer and UUID)
+        query = query.not("id", "is", null);
       }
 
       const { error } = await query;
@@ -233,10 +242,10 @@ const Notifications = () => {
 
       toast.success(`All ${activeTab} cleared successfully`);
       
-      // Update local state
       if (activeTab === "inquiries") setInquiries([]);
       else if (activeTab === "contracts") setContracts([]);
       else if (activeTab === "payments") setPayments([]);
+      else if (activeTab === "invoices") setInvoices([]);
       else setErrorLogs([]);
       
     } catch (error: any) {
@@ -245,6 +254,94 @@ const Notifications = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const generateInvoicePDF = (payment: PaymentRecord) => {
+    const doc = new jsPDF();
+    const dateStr = new Date(payment.created_at).toLocaleDateString('en-GB');
+
+    // --- Header ---
+    doc.setFillColor(0, 0, 0);
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("GRAPHORIA", 20, 20);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text("CREATIVITY DESIGN", 20, 26);
+    doc.text("Creative Digital Agency", 20, 31);
+
+    doc.setFontSize(9);
+    doc.text("graphoriacreativitydesign@gmail.com", 140, 22);
+    doc.text("+91 93600 73899", 140, 28);
+
+    // --- Invoice Meta ---
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(18);
+    doc.setFont("helvetica", "bold");
+    doc.text("PAID RECEIPT", 140, 60);
+    
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Invoice ID: ${payment.invoice_id}`, 140, 68);
+    doc.text(`Date: ${dateStr}`, 140, 73);
+    doc.setTextColor(0, 180, 80);
+    doc.setFont("helvetica", "bold");
+    doc.text(`Transaction ID: ${payment.transaction_id}`, 140, 78);
+
+    // --- Bill To ---
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "bold");
+    doc.text("BILL TO:", 20, 60);
+    doc.setFont("helvetica", "normal");
+    doc.text(payment.client_name, 20, 68);
+    if (payment.client_email) doc.text(payment.client_email, 20, 73);
+
+    // --- Project Info ---
+    doc.setFont("helvetica", "bold");
+    doc.text("PROJECT DETAILS:", 20, 90);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Project: ${payment.project_name}`, 20, 98);
+    if (payment.service) doc.text(`Service: ${payment.service}`, 20, 103);
+
+    // --- Table ---
+    autoTable(doc, {
+      startY: 115,
+      head: [['Description', 'Amount']],
+      body: [
+        [payment.service || payment.project_name, `INR ${payment.total_amount.toLocaleString()}`],
+      ],
+      headStyles: { fillColor: [0, 255, 136], textColor: [0, 0, 0], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [245, 245, 245] },
+      margin: { left: 20, right: 20 }
+    });
+
+    // --- Summary ---
+    const finalY = (doc as any).lastAutoTable.finalY + 15;
+    
+    doc.setFontSize(10);
+    doc.text("Total Project Amount:", 120, finalY);
+    doc.text(`INR ${payment.total_amount.toLocaleString()}`, 190, finalY, { align: "right" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(0, 180, 80);
+    doc.text(`Paid Advance:`, 120, finalY + 8);
+    doc.text(`INR ${payment.advance_amount.toLocaleString()}`, 190, finalY + 8, { align: "right" });
+
+    doc.setTextColor(0, 0, 0);
+    doc.setFont("helvetica", "normal");
+    const remaining = payment.total_amount - payment.advance_amount;
+    doc.text("Remaining Balance Due:", 120, finalY + 16);
+    doc.text(`INR ${remaining.toLocaleString()}`, 190, finalY + 16, { align: "right" });
+
+    // --- Footer ---
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Thank you for choosing Graphoria Creativity Design!", 105, 280, { align: "center" });
+
+    doc.save(`Graphoria_Receipt_${payment.invoice_id}.pdf`);
   };
 
   const getSeverityStyles = (severity: string) => {
@@ -264,7 +361,8 @@ const Notifications = () => {
           {[
             { id: "inquiries", label: "Inquiries", icon: <MessageSquare size={18} />, unread: inquiries?.some(i => !i.is_read) },
             { id: "contracts", label: "Contracts", icon: <FileText size={18} />, unread: contracts?.some(c => !c.is_read) },
-            { id: "payments", label: "Payments", icon: <CreditCard size={18} />, unread: payments?.some(p => !p.is_read) },
+            { id: "payments", label: "Links", icon: <CreditCard size={18} />, unread: payments?.some(p => p.status === "pending" && !p.is_read) },
+            { id: "invoices", label: "Invoices", icon: <FileCheck size={18} />, unread: invoices?.some(p => !p.is_read) },
             { id: "errors", label: "Errors", icon: <Terminal size={18} />, unread: false },
           ].map((tab) => (
             <button
@@ -285,10 +383,10 @@ const Notifications = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full px-1">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold">
-            {activeTab === "inquiries" ? "Project Inquiries" : activeTab === "contracts" ? "Project Contracts" : activeTab === "payments" ? "Client Payments" : "System Monitoring"}
+            {activeTab === "inquiries" ? "Project Inquiries" : activeTab === "contracts" ? "Project Contracts" : activeTab === "payments" ? "Payment Links" : activeTab === "invoices" ? "Client Invoices" : "System Monitoring"}
           </h2>
           <p className="text-muted-foreground text-xs sm:text-sm">
-            {activeTab === "inquiries" ? "Manage new client leads." : activeTab === "contracts" ? "Track project agreements." : activeTab === "payments" ? "Verify transaction IDs from clients." : "Application stability logs."}
+            {activeTab === "inquiries" ? "Manage new client leads." : activeTab === "contracts" ? "Track project agreements." : activeTab === "payments" ? "Track all generated payment URLs." : activeTab === "invoices" ? "Download receipts for paid clients." : "Application stability logs."}
           </p>
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
@@ -362,12 +460,21 @@ const Notifications = () => {
           ))
         ) : activeTab === "payments" ? (
           (payments || []).map((payment) => (
-            <div key={payment.id} className={`p-5 sm:p-7 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row gap-5 group ${!payment.is_read ? "border-brand-green/20 bg-brand-green/5" : "bg-card border-border"}`}>
-              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${!payment.is_read ? "bg-brand-green/20 text-brand-green" : "bg-secondary text-muted-foreground"}`}><CreditCard size={28} /></div>
+            <div key={payment.id} className={`p-5 sm:p-7 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row gap-5 group ${!payment.is_read ? "border-primary/20 bg-primary/5" : "bg-card border-border"}`}>
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${!payment.is_read ? "bg-primary/20 text-primary" : "bg-secondary text-muted-foreground"}`}>
+                <CreditCard size={28} />
+              </div>
               <div className="flex-1 min-w-0 space-y-4">
                 <div className="flex flex-col sm:flex-row justify-between gap-3">
                   <div className="min-w-0">
-                    <h4 className="text-lg sm:text-xl font-bold flex items-center gap-3 truncate">{payment.client_name} {!payment.is_read && <span className="px-2 py-0.5 rounded-full bg-brand-green text-[9px] text-black font-black uppercase">Paid</span>}</h4>
+                    <h4 className="text-lg sm:text-xl font-bold flex items-center gap-3 truncate">
+                      {payment.client_name} 
+                      {payment.status === "paid" ? (
+                        <span className="px-2 py-0.5 rounded-full bg-brand-green text-[9px] text-black font-black uppercase ml-2">Paid</span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-full bg-amber-500 text-[9px] text-black font-black uppercase ml-2">Pending</span>
+                      )}
+                    </h4>
                     <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1 truncate"><Hash size={14} className="shrink-0" /> {payment.invoice_id} • {payment.project_name}</p>
                   </div>
                   <span className="text-xs text-muted-foreground bg-black/40 px-3 py-1.5 rounded-lg h-fit border border-white/5 whitespace-nowrap self-start sm:self-center">{payment.created_at ? formatDistanceToNow(new Date(payment.created_at), { addSuffix: true }) : 'unknown'}</span>
@@ -376,17 +483,52 @@ const Notifications = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="p-4 rounded-2xl bg-black/20 border border-white/5">
                     <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Transaction ID</p>
-                    <p className="text-sm font-mono font-bold text-white break-all">{payment.transaction_id}</p>
+                    <p className="text-sm font-mono font-bold text-white break-all">{payment.transaction_id || "None yet"}</p>
                   </div>
-                  <div className="p-4 rounded-2xl bg-brand-green/5 border border-brand-green/10">
-                    <p className="text-[10px] text-brand-green/50 uppercase font-bold tracking-widest mb-1">Amount Received</p>
-                    <p className="text-xl font-bold text-brand-green">₹{payment.advance_amount.toLocaleString()}</p>
+                  <div className="p-4 rounded-2xl bg-secondary/50 border border-border">
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest mb-1">Advance Amount</p>
+                    <p className="text-xl font-bold text-foreground">₹{payment.advance_amount.toLocaleString()}</p>
                   </div>
                 </div>
 
                 <div className="pt-2 flex flex-wrap gap-4">
-                  {!payment.is_read && <button onClick={() => markAsRead(payment.id, "payments")} className="text-xs font-bold text-brand-green flex items-center gap-1.5"><Check size={14}/>Mark Verified</button>}
+                  {!payment.is_read && <button onClick={() => markAsRead(payment.id, "payments")} className="text-xs font-bold text-primary flex items-center gap-1.5"><Check size={14}/>Mark Read</button>}
                   <button onClick={() => deleteItem(payment.id, "payments")} className="text-xs font-bold text-muted-foreground hover:text-destructive flex items-center gap-1.5"><Trash2 size={14}/>Delete Record</button>
+                </div>
+              </div>
+            </div>
+          ))
+        ) : activeTab === "invoices" ? (
+          (invoices || []).map((invoice) => (
+            <div key={invoice.id} className={`p-5 sm:p-7 rounded-3xl border transition-all duration-500 flex flex-col md:flex-row gap-5 group ${!invoice.is_read ? "border-brand-green/20 bg-brand-green/5" : "bg-card border-border"}`}>
+              <div className={`w-12 h-12 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center flex-shrink-0 ${!invoice.is_read ? "bg-brand-green/20 text-brand-green shadow-[0_0_20px_rgba(0,255,136,0.1)]" : "bg-secondary text-muted-foreground"}`}>
+                <FileCheck size={28} />
+              </div>
+              <div className="flex-1 min-w-0 space-y-4">
+                <div className="flex flex-col sm:flex-row justify-between gap-3">
+                  <div className="min-w-0">
+                    <h4 className="text-lg sm:text-xl font-bold flex items-center gap-3 truncate">{invoice.client_name} <span className="px-2 py-0.5 rounded-full bg-brand-green text-[9px] text-black font-black uppercase">Paid</span></h4>
+                    <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1 truncate"><Hash size={14} className="shrink-0" /> {invoice.invoice_id} • {invoice.project_name}</p>
+                  </div>
+                  <span className="text-xs text-muted-foreground bg-black/40 px-3 py-1.5 rounded-lg h-fit border border-white/5 whitespace-nowrap self-start sm:self-center">{invoice.created_at ? formatDistanceToNow(new Date(invoice.created_at), { addSuffix: true }) : 'unknown'}</span>
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 rounded-2xl bg-black/20 border border-white/5">
+                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1">Receipt ID</p>
+                    <p className="text-sm font-mono font-bold text-white break-all">{invoice.transaction_id}</p>
+                  </div>
+                  <div className="p-4 rounded-2xl bg-brand-green/5 border border-brand-green/10">
+                    <p className="text-[10px] text-brand-green/50 uppercase font-bold tracking-widest mb-1">Verified Amount</p>
+                    <p className="text-xl font-bold text-brand-green">₹{invoice.advance_amount.toLocaleString()}</p>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-wrap gap-4">
+                  <button onClick={() => generateInvoicePDF(invoice)} className="text-xs font-bold text-brand-green flex items-center gap-1.5 uppercase tracking-widest hover:brightness-125 transition-all">
+                    <Download size={14}/>Download Invoice
+                  </button>
+                  {!invoice.is_read && <button onClick={() => markAsRead(invoice.id, "payments")} className="text-xs font-bold text-primary flex items-center gap-1.5"><Check size={14}/>Mark Viewed</button>}
                 </div>
               </div>
             </div>
@@ -415,10 +557,11 @@ const Notifications = () => {
         ((activeTab === "inquiries" && inquiries.length === 0) || 
          (activeTab === "contracts" && contracts.length === 0) || 
          (activeTab === "payments" && payments.length === 0) ||
+         (activeTab === "invoices" && invoices.length === 0) ||
          (activeTab === "errors" && errorLogs.length === 0)) && (
           <div className="py-20 text-center space-y-4 bg-card border border-dashed border-border rounded-3xl">
             <div className="w-20 h-20 rounded-full bg-secondary flex items-center justify-center mx-auto text-muted-foreground/30">
-              {activeTab === "inquiries" ? <MessageSquare size={40} /> : activeTab === "contracts" ? <FileText size={40} /> : activeTab === "payments" ? <CreditCard size={40} /> : <Terminal size={40} />}
+              {activeTab === "inquiries" ? <MessageSquare size={40} /> : activeTab === "contracts" ? <FileText size={40} /> : activeTab === "payments" ? <CreditCard size={40} /> : activeTab === "invoices" ? <FileCheck size={40} /> : <Terminal size={40} />}
             </div>
             <h3 className="font-bold text-foreground">No {activeTab} yet</h3>
           </div>

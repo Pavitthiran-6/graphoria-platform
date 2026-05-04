@@ -64,21 +64,40 @@ Deno.serve(async (req) => {
         </div>
       `
     } else if (table === 'payments') {
-      subject = `💰 Payment Received: ${record.client_name}`
+      // Only send notification when the status is updated to 'paid'
+      if (record.status !== 'paid') {
+        return new Response(JSON.stringify({ message: "Status not paid, skipping email" }), { 
+          headers: { 'Content-Type': 'application/json' },
+          status: 200 
+        })
+      }
+
+      subject = `💰 Payment Received: ₹${record.advance_amount?.toLocaleString()} from ${record.client_name}`
       htmlContent = `
-        <div style="font-family: sans-serif; padding: 20px; color: #333;">
-          <h2 style="color: #00ff88;">New Payment Confirmation</h2>
-          <div style="background: #f9f9f9; padding: 20px; border-radius: 12px; border: 1px solid #eee;">
-            <p><strong>Client:</strong> ${record.client_name}</p>
-            <p><strong>Project:</strong> <span style="font-size: 18px; font-weight: bold;">${record.project_name}</span></p>
-            <p><strong>Amount Paid:</strong> <span style="color: #00ff88; font-size: 20px; font-weight: bold;">₹${record.advance_amount?.toLocaleString() || record.advance_amount}</span></p>
-            <p><strong>Invoice ID:</strong> ${record.invoice_id}</p>
-            <p><strong>Transaction ID:</strong> <span style="font-family: monospace; background: #eee; padding: 2px 5px;">${record.transaction_id}</span></p>
+        <div style="font-family: sans-serif; padding: 20px; color: #333; max-width: 600px; margin: auto; border: 1px solid #eee; border-radius: 12px;">
+          <h2 style="color: #00ff88; text-align: center;">Payment Received</h2>
+          <p style="text-align: center; color: #666;">A new transaction has been submitted for verification.</p>
+          
+          <div style="background: #000; color: #fff; padding: 25px; border-radius: 12px; margin: 20px 0;">
+            <p style="margin: 0; font-size: 12px; color: #00ff88; text-transform: uppercase; letter-spacing: 2px;">Amount Paid</p>
+            <h1 style="margin: 5px 0 20px 0; font-size: 36px;">₹${record.advance_amount?.toLocaleString()}</h1>
+            
+            <div style="border-top: 1px solid #333; pt: 15px;">
+              <p style="margin: 10px 0; font-size: 14px;"><strong>Client:</strong> ${record.client_name}</p>
+              <p style="margin: 10px 0; font-size: 14px;"><strong>Project:</strong> ${record.project_name}</p>
+              <p style="margin: 10px 0; font-size: 14px;"><strong>Transaction ID:</strong> <span style="font-family: monospace; color: #00ff88;">${record.transaction_id}</span></p>
+              <p style="margin: 10px 0; font-size: 14px;"><strong>Invoice ID:</strong> ${record.invoice_id}</p>
+            </div>
           </div>
-          <div style="margin-top: 25px; text-align: center;">
-             <p style="font-size: 14px; color: #555;">Please verify the transaction ID in your UPI app.</p>
+
+          <div style="text-align: center; margin-top: 30px;">
+            <p style="font-size: 14px; color: #666; mb: 20px;">You can now download the official PDF receipt from your Admin Dashboard.</p>
+            <a href="https://graphoria.in/admin/notifications" style="background: #00ff88; color: #000; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">View in Admin Panel</a>
           </div>
-          <p style="margin-top: 30px; font-size: 11px; color: #aaa; text-align: center;">Automated notification from Graphoria Payment System</p>
+          
+          <p style="margin-top: 40px; font-size: 11px; color: #aaa; text-align: center; border-top: 1px solid #eee; pt: 20px;">
+            This is an automated notification from Graphoria Creativity Design.
+          </p>
         </div>
       `
     } else {

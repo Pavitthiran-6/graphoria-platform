@@ -1,110 +1,109 @@
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import React, { useState } from "react";
+import {
+  CreditCard,
+  User,
+  Mail,
+  Briefcase,
+  IndianRupee,
+  Percent,
+  Lock,
+  Hash,
+  Link as LinkIcon,
+  Copy,
+  ExternalLink,
+  Clock,
+  Loader2,
+  CheckCircle2,
+  Download,
+  FileText,
+  Smartphone
+} from "lucide-react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { toast } from "sonner";
+import { Separator } from "@/components/ui/separator";
+import Button from "../components/Button";
 import { supabase } from "@/lib/supabase";
-import { 
-  Plus, 
-  Copy, 
-  Mail, 
-  Link as LinkIcon, 
-  CheckCircle2, 
-  IndianRupee, 
-  User, 
-  Briefcase, 
-  Hash, 
-  Percent,
-  ExternalLink,
-  Zap,
-  Loader2,
-  Lock,
-  Clock
-} from "lucide-react";
+import { toast } from "sonner";
 
 const CreatePayment = () => {
   const [formData, setFormData] = useState({
     clientName: "",
     clientEmail: "",
     projectName: "",
-    serviceName: "",
+    serviceDescription: "",
     totalAmount: "",
     advancePercentage: "50",
   });
 
+  const [isSaving, setIsSaving] = useState(false);
   const [generatedLink, setGeneratedLink] = useState("");
   const [invoiceId, setInvoiceId] = useState("");
   const [accessToken, setAccessToken] = useState("");
   const [advanceAmount, setAdvanceAmount] = useState(0);
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Generate initial IDs on mount
-  useEffect(() => {
-    resetGenerator();
-  }, []);
-
-  const resetGenerator = () => {
-    const invId = `INV-${Math.floor(100000 + Math.random() * 900000)}`;
-    const token = Math.random().toString(36).substring(2, 10); // 8 chars
-    setInvoiceId(invId);
-    setAccessToken(token);
-    setGeneratedLink("");
-  };
-
-  // Recalculate advance amount whenever total or percentage changes
-  useEffect(() => {
-    const total = parseFloat(formData.totalAmount) || 0;
-    const percentage = parseFloat(formData.advancePercentage) || 0;
-    setAdvanceAmount(Math.round(total * (percentage / 100)));
-  }, [formData.totalAmount, formData.advancePercentage]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    if (name === "totalAmount" || name === "advancePercentage") {
+      const total = name === "totalAmount" ? parseFloat(value) : parseFloat(formData.totalAmount);
+      const percent = name === "advancePercentage" ? parseFloat(value) : parseFloat(formData.advancePercentage);
+
+      if (!isNaN(total) && !isNaN(percent)) {
+        setAdvanceAmount((total * percent) / 100);
+      }
+    }
   };
 
-  const handleGenerateLink = async (e: React.FormEvent) => {
+
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.clientName || !formData.projectName || !formData.totalAmount || !formData.serviceName) {
-      toast.error("Please fill in all required fields");
-      return;
-    }
-
     setIsSaving(true);
-    try {
-      // Set expiry to 24 hours from now
-      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
+    try {
+      // 1. Generate Invoice ID
+      const randomId = Math.floor(100000 + Math.random() * 900000);
+      const newInvoiceId = `INV-${randomId}`;
+      setInvoiceId(newInvoiceId);
+
+      // 2. Generate Access Token
+      const token = Math.random().toString(36).substring(2, 10).toUpperCase();
+      setAccessToken(token);
+
+      // 3. Calculate Expiry
+      const expiresAt = new Date();
+      expiresAt.setHours(expiresAt.getHours() + 24);
+
+      // 4. Save to Supabase
       const { error } = await supabase
-        .from('payments')
-        .insert([
-          {
-            invoice_id: invoiceId,
-            access_token: accessToken,
-            client_name: formData.clientName,
-            client_email: formData.clientEmail,
-            project_name: formData.projectName,
-            service: formData.serviceName,
-            total_amount: parseFloat(formData.totalAmount),
-            advance_amount: advanceAmount,
-            status: 'pending',
-            expires_at: expiresAt
-          }
-        ]);
+        .from("payments")
+        .insert({
+          invoice_id: newInvoiceId,
+          access_token: token,
+          client_name: formData.clientName,
+          client_email: formData.clientEmail,
+          project_name: formData.projectName,
+          service: formData.serviceDescription,
+          total_amount: parseFloat(formData.totalAmount),
+          advance_amount: advanceAmount,
+          expires_at: expiresAt.toISOString(),
+          status: "pending"
+        });
 
       if (error) throw error;
 
+      // 5. Generate Link
       const baseUrl = window.location.origin;
-      const fullUrl = `${baseUrl}/payment/${invoiceId}-${accessToken}`;
+      const fullUrl = `${baseUrl}/payment/${newInvoiceId}-${token}`;
       setGeneratedLink(fullUrl);
-      toast.success("Secure link generated successfully!");
+
+      toast.success("Payment link generated successfully!");
     } catch (error: any) {
-      console.error("Error saving payment:", error);
-      toast.error(error.message || "Failed to save payment to database");
+      console.error("Error creating payment:", error);
+      toast.error(error.message || "Failed to create payment link");
     } finally {
       setIsSaving(false);
     }
@@ -130,103 +129,110 @@ const CreatePayment = () => {
         <Card className="border-white/10 bg-slate-900/40 backdrop-blur-sm">
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2 text-white">
-              <Plus className="w-5 h-5 text-brand-green" /> Payment Details
+              <CreditCard className="w-5 h-5 text-brand-green" /> Payment Details
             </CardTitle>
-            <CardDescription className="text-slate-400">Fill in the project and client information.</CardDescription>
+            <CardDescription className="text-slate-400">Fill in the client and project information below.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleGenerateLink} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <Label htmlFor="clientName" className="flex items-center gap-2 text-slate-300">
-                    <User className="w-3.5 h-3.5 text-slate-500" /> Client Name
-                  </Label>
-                  <Input 
-                    id="clientName" 
-                    name="clientName"
-                    placeholder="e.g. John Doe"
-                    value={formData.clientName}
-                    onChange={handleChange}
-                    className="bg-black/40 border-white/10 text-white"
-                    required
-                  />
+                  <Label htmlFor="clientName" className="text-slate-300">Client Name</Label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                    <Input
+                      id="clientName"
+                      name="clientName"
+                      placeholder="e.g. John Doe"
+                      required
+                      value={formData.clientName}
+                      onChange={handleChange}
+                      className="pl-10 bg-black/40 border-white/10 text-white placeholder:text-slate-600"
+                    />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="clientEmail" className="flex items-center gap-2 text-slate-300">
-                    <Mail className="w-3.5 h-3.5 text-slate-500" /> Client Email
-                  </Label>
-                  <Input 
-                    id="clientEmail" 
-                    name="clientEmail"
-                    type="email"
-                    placeholder="john@example.com"
-                    value={formData.clientEmail}
+                  <Label htmlFor="clientEmail" className="text-slate-300">Client Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                    <Input
+                      id="clientEmail"
+                      name="clientEmail"
+                      type="email"
+                      placeholder="e.g. john@example.com"
+                      required
+                      value={formData.clientEmail}
+                      onChange={handleChange}
+                      className="pl-10 bg-black/40 border-white/10 text-white placeholder:text-slate-600"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectName" className="text-slate-300">Project Name</Label>
+                <div className="relative">
+                  <Briefcase className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                  <Input
+                    id="projectName"
+                    name="projectName"
+                    placeholder="e.g. Website Redesign"
+                    required
+                    value={formData.projectName}
                     onChange={handleChange}
-                    className="bg-black/40 border-white/10 text-white"
+                    className="pl-10 bg-black/40 border-white/10 text-white placeholder:text-slate-600"
                   />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="projectName" className="flex items-center gap-2 text-slate-300">
-                  <Briefcase className="w-3.5 h-3.5 text-slate-500" /> Project Name
-                </Label>
-                <Input 
-                  id="projectName" 
-                  name="projectName"
-                  placeholder="e.g. Website Rebrand"
-                  value={formData.projectName}
-                  onChange={handleChange}
-                  className="bg-black/40 border-white/10 text-white"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="serviceName" className="flex items-center gap-2 text-slate-300">
-                  <Zap className="w-3.5 h-3.5 text-slate-500" /> Service Description
-                </Label>
-                <Input 
-                  id="serviceName" 
-                  name="serviceName"
-                  placeholder="e.g. Standard Branding + Custom React Site"
-                  value={formData.serviceName}
-                  onChange={handleChange}
-                  className="bg-black/40 border-white/10 text-white"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="totalAmount" className="flex items-center gap-2 text-slate-300">
-                    <IndianRupee className="w-3.5 h-3.5 text-slate-500" /> Total Amount
-                  </Label>
-                  <Input 
-                    id="totalAmount" 
-                    name="totalAmount"
-                    type="number"
-                    placeholder="0.00"
-                    value={formData.totalAmount}
-                    onChange={handleChange}
-                    className="bg-black/40 border-white/10 text-white"
+                <Label htmlFor="serviceDescription" className="text-slate-300">Service Description</Label>
+                <div className="relative">
+                  <FileText className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                  <Input
+                    id="serviceDescription"
+                    name="serviceDescription"
+                    placeholder="e.g. Full Stack Development + SEO"
                     required
+                    value={formData.serviceDescription}
+                    onChange={handleChange}
+                    className="pl-10 bg-black/40 border-white/10 text-white placeholder:text-slate-600"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                 <div className="space-y-2">
-                  <Label htmlFor="advancePercentage" className="flex items-center gap-2 text-slate-300">
-                    <Percent className="w-3.5 h-3.5 text-slate-500" /> Advance Percentage
-                  </Label>
-                  <Input 
-                    id="advancePercentage" 
-                    name="advancePercentage"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={formData.advancePercentage}
-                    onChange={handleChange}
-                    className="bg-black/40 border-white/10 text-white"
-                  />
+                  <Label htmlFor="totalAmount" className="text-slate-300">Total Amount (₹)</Label>
+                  <div className="relative">
+                    <IndianRupee className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                    <Input
+                      id="totalAmount"
+                      name="totalAmount"
+                      type="number"
+                      placeholder="e.g. 50000"
+                      required
+                      value={formData.totalAmount}
+                      onChange={handleChange}
+                      className="pl-10 bg-black/40 border-white/10 text-white placeholder:text-slate-600"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="advancePercentage" className="text-slate-300">Advance %</Label>
+                  <div className="relative">
+                    <Percent className="absolute left-3 top-3 w-4 h-4 text-slate-500" />
+                    <Input
+                      id="advancePercentage"
+                      name="advancePercentage"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={formData.advancePercentage}
+                      onChange={handleChange}
+                      className="pl-10 bg-black/40 border-white/10 text-white"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -243,8 +249,8 @@ const CreatePayment = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
+              <Button
+                type="submit"
                 disabled={isSaving}
                 className="w-full h-12 text-base font-semibold bg-brand-green text-black hover:bg-brand-green/90 shadow-lg shadow-brand-green/10 transition-all hover:scale-[1.01]"
               >
@@ -288,15 +294,15 @@ const CreatePayment = () => {
                   <LinkIcon className="w-3.5 h-3.5 text-slate-500" /> Secure Payment URL
                 </Label>
                 <div className="relative">
-                  <Input 
-                    value={generatedLink} 
+                  <Input
+                    value={generatedLink}
                     placeholder="Link will appear here..."
-                    readOnly 
+                    readOnly
                     className="pr-20 sm:pr-24 font-mono text-[11px] sm:text-xs bg-black/40 h-12 border-white/10 text-brand-green/80 placeholder:text-slate-700"
                   />
-                  <Button 
-                    size="sm" 
-                    variant="ghost" 
+                  <Button
+                    size="sm"
+                    variant="ghost"
                     disabled={!generatedLink}
                     onClick={copyToClipboard}
                     className="absolute right-1 top-1 h-10 text-slate-400 hover:text-brand-green hover:bg-brand-green/10 transition-all px-3 sm:px-4"
@@ -309,16 +315,16 @@ const CreatePayment = () => {
               <Separator className="bg-white/5" />
 
               <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   disabled={!generatedLink}
                   className="flex-1 h-12 border-white/10 text-white hover:bg-white/5 active:scale-95 transition-transform"
                   onClick={() => generatedLink && window.open(generatedLink, '_blank')}
                 >
                   <ExternalLink className="w-4 h-4 mr-2 text-brand-green" /> Preview Link
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   disabled={!generatedLink}
                   className="flex-1 h-12 border-white/10 text-white hover:bg-white/5 active:scale-95 transition-transform"
                   onClick={() => {
@@ -334,23 +340,24 @@ const CreatePayment = () => {
             </CardContent>
           </Card>
 
-          <Button 
-            variant="ghost" 
-            className="w-full text-slate-500 hover:text-white transition-colors"
-            onClick={() => {
-              setFormData({
-                clientName: "",
-                clientEmail: "",
-                projectName: "",
-                serviceName: "",
-                totalAmount: "",
-                advancePercentage: "50",
-              });
-              resetGenerator();
-            }}
-          >
-            Clear and Create New
-          </Button>
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => {
+                setGeneratedLink("");
+                setFormData({
+                  clientName: "",
+                  clientEmail: "",
+                  projectName: "",
+                  serviceDescription: "",
+                  totalAmount: "",
+                  advancePercentage: "50",
+                });
+              }}
+              className="text-xs text-slate-500 hover:text-white transition-colors"
+            >
+              Clear and Create New
+            </button>
+          </div>
         </div>
       </div>
     </div>
