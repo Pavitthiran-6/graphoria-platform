@@ -13,7 +13,7 @@ Deno.serve(async (req) => {
     let subject = ""
     let htmlContent = ""
 
-    // Identify if it's an inquiry or an error based on the table name
+    // Identify the notification template based on the table name
     if (table === 'inquiries') {
       subject = `New Project Inquiry: ${record.full_name}`
       htmlContent = `
@@ -61,6 +61,24 @@ Deno.serve(async (req) => {
             <a href="${record.pdf_url}" style="background: #00ff88; color: #000; padding: 15px 30px; text-decoration: none; border-radius: 30px; font-weight: bold; display: inline-block;">View Signed PDF</a>
           </div>
           <p style="margin-top: 30px; font-size: 11px; color: #aaa; text-align: center;">Automated notification from Graphoria Contract System</p>
+        </div>
+      `
+    } else if (table === 'payments') {
+      subject = `💰 Payment Received: ${record.client_name}`
+      htmlContent = `
+        <div style="font-family: sans-serif; padding: 20px; color: #333;">
+          <h2 style="color: #00ff88;">New Payment Confirmation</h2>
+          <div style="background: #f9f9f9; padding: 20px; border-radius: 12px; border: 1px solid #eee;">
+            <p><strong>Client:</strong> ${record.client_name}</p>
+            <p><strong>Project:</strong> <span style="font-size: 18px; font-weight: bold;">${record.project_name}</span></p>
+            <p><strong>Amount Paid:</strong> <span style="color: #00ff88; font-size: 20px; font-weight: bold;">₹${record.advance_amount?.toLocaleString() || record.advance_amount}</span></p>
+            <p><strong>Invoice ID:</strong> ${record.invoice_id}</p>
+            <p><strong>Transaction ID:</strong> <span style="font-family: monospace; background: #eee; padding: 2px 5px;">${record.transaction_id}</span></p>
+          </div>
+          <div style="margin-top: 25px; text-align: center;">
+             <p style="font-size: 14px; color: #555;">Please verify the transaction ID in your UPI app.</p>
+          </div>
+          <p style="margin-top: 30px; font-size: 11px; color: #aaa; text-align: center;">Automated notification from Graphoria Payment System</p>
         </div>
       `
     } else {

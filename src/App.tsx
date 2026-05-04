@@ -12,6 +12,7 @@ import OurApproach from "./pages/OurApproach";
 import Contact from "./pages/Contact";
 import Contract from "./pages/Contract";
 import ProjectDetail from "./pages/ProjectDetail";
+import Payment from "./pages/Payment";
 import NotFound from "./pages/NotFound";
 
 import AdminRoutes from "./admin/AdminRoutes";
@@ -26,10 +27,11 @@ const AppContent = () => {
   const staticPaths = ['/', '/about', '/our-work', '/our-approach', '/contact', '/contract'];
   const isStaticPath = staticPaths.includes(location.pathname);
   const isProjectDetailPath = location.pathname.startsWith('/project/');
+  const isPaymentPath = location.pathname.startsWith('/payment');
   
-  const isKnownPath = isStaticPath || isProjectDetailPath || isAdminPath;
+  const isKnownPath = isStaticPath || isProjectDetailPath || isAdminPath || isPaymentPath;
   const isContractPath = location.pathname === '/contract';
-  const showNavbar = isKnownPath && !isAdminPath && !isContractPath;
+  const showNavbar = isKnownPath && !isAdminPath && !isContractPath && !isPaymentPath;
 
   return (
     <>
@@ -42,6 +44,7 @@ const AppContent = () => {
         <Route path="/our-approach" element={<OurApproach />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/contract" element={<Contract />} />
+        <Route path="/payment/:invoiceId" element={<Payment />} />
         <Route path="/project/:slug" element={<ProjectDetail />} />
         
         {/* Admin Routes */}

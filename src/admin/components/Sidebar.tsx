@@ -8,7 +8,8 @@ import {
   Settings, 
   LogOut,
   X,
-  Bell
+  Bell,
+  CreditCard
 } from "lucide-react";
 import graphoriaLogo from "@/assets/graphoria-logo.png";
 import { cn } from "@/lib/utils";
@@ -26,6 +27,7 @@ const menuItems = [
   { icon: Layers, label: "Categories", path: "/admin/categories" },
   { icon: Home, label: "Home Swiper", path: "/admin/home-swiper" },
   { icon: Bell, label: "Notifications", path: "/admin/notifications" },
+  { icon: CreditCard, label: "Create Payment", path: "/admin/payments" },
   { icon: Settings, label: "Settings", path: "/admin/settings" },
 ];
 

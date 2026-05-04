@@ -8,6 +8,7 @@ import Categories from "./pages/Categories";
 import HomeSwiper from "./pages/HomeSwiper";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
+import CreatePayment from "./pages/CreatePayment";
 import Login from "./pages/Login";
 
 const AdminRoutes = () => {
@@ -26,6 +27,7 @@ const AdminRoutes = () => {
                 <Route path="home-swiper" element={<HomeSwiper />} />
                 <Route path="settings" element={<Settings />} />
                 <Route path="notifications" element={<Notifications />} />
+                <Route path="payments" element={<CreatePayment />} />
                 {/* Default redirect to dashboard */}
                 <Route path="" element={<Navigate to="dashboard" replace />} />
               </Routes>

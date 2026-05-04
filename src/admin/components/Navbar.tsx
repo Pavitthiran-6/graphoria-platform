@@ -11,15 +11,18 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
   const location = useLocation();
   const [unreadCount, setUnreadCount] = useState(0);
 
-  // Fetch unread inquiries count
   const fetchUnreadCount = async () => {
-    const { count, error } = await supabase
-      .from('inquiries')
-      .select('*', { count: 'exact', head: true })
-      .eq('is_read', false);
-    
-    if (!error && count !== null) {
-      setUnreadCount(count);
+    try {
+      const [inquiriesRes, contractsRes, paymentsRes] = await Promise.all([
+        supabase.from('inquiries').select('*', { count: 'exact', head: true }).eq('is_read', false),
+        supabase.from('contracts').select('*', { count: 'exact', head: true }).eq('is_read', false),
+        supabase.from('payments').select('*', { count: 'exact', head: true }).eq('status', 'paid').eq('is_read', false)
+      ]);
+      
+      const total = (inquiriesRes.count || 0) + (contractsRes.count || 0) + (paymentsRes.count || 0);
+      setUnreadCount(total);
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
     }
   };
 
@@ -29,17 +32,27 @@ const Navbar = ({ onMenuClick }: NavbarProps) => {
     // Refresh count every 30 seconds
     const interval = setInterval(fetchUnreadCount, 30000);
     
-    // Also listen for real-time changes
-    const subscription = supabase
+    // Listen for real-time changes across all tables
+    const inquiriesSubscription = supabase
       .channel('inquiries_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, () => {
-        fetchUnreadCount();
-      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'inquiries' }, () => fetchUnreadCount())
+      .subscribe();
+
+    const contractsSubscription = supabase
+      .channel('contracts_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'contracts' }, () => fetchUnreadCount())
+      .subscribe();
+
+    const paymentsSubscription = supabase
+      .channel('payments_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'payments' }, () => fetchUnreadCount())
       .subscribe();
 
     return () => {
       clearInterval(interval);
-      supabase.removeChannel(subscription);
+      supabase.removeChannel(inquiriesSubscription);
+      supabase.removeChannel(contractsSubscription);
+      supabase.removeChannel(paymentsSubscription);
     };
   }, []);
 
