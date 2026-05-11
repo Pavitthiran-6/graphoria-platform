@@ -10,6 +10,16 @@ import { supabase } from "@/lib/supabase";
 import { Project } from "@/data/projects";
 import { toast } from "sonner";
 
+const getFilePathFromUrl = (url: string | undefined | null) => {
+  if (!url || typeof url !== 'string') return null;
+  const parts = url.split('/storage/v1/object/public/images/');
+  if (parts.length > 1) {
+    return parts[1];
+  }
+  return null;
+};
+
+
 const Products = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -23,6 +33,10 @@ const Products = () => {
   const [selectedCategory, setSelectedCategory] = useState("");
   const [filterCategory, setFilterCategory] = useState("All");
   const [categories, setCategories] = useState<{ label: string, value: string }[]>([]);
+  const [currentGalleryUrls, setCurrentGalleryUrls] = useState<string[]>([]);
+  const [deletedUrls, setDeletedUrls] = useState<string[]>([]);
+
+
 
   // Load projects from Supabase
   const fetchProjects = async () => {
@@ -67,7 +81,9 @@ const Products = () => {
     setEditingProject(null);
     setCoverImage(null);
     setGalleryImages([]);
+    setCurrentGalleryUrls([]);
     if (categories.length > 0) {
+
       setSelectedCategory(categories[0].value);
     }
     setIsAddModalOpen(true);
@@ -76,8 +92,13 @@ const Products = () => {
   const openEditModal = (project: Project) => {
     setEditingProject(project);
     setSelectedCategory(project.category || (categories.length > 0 ? categories[0].value : ""));
+    setCurrentGalleryUrls(project.gallery || []);
+    setGalleryImages([]);
+    setDeletedUrls([]);
     setIsAddModalOpen(true);
   };
+
+
 
   const handleCloseModal = () => {
     setIsAddModalOpen(false);
@@ -145,7 +166,16 @@ const Products = () => {
     setErrors({});
     setIsSaving(true);
     let coverImageUrl = editingProject?.cover_image || editingProject?.image || "";
-    let galleryUrls = editingProject?.gallery || [];
+    let galleryUrls = [...currentGalleryUrls];
+    const finalDeletedUrls = [...deletedUrls];
+
+    // If we're replacing the cover image, add the old one to deletion queue
+    if (coverImage && (editingProject?.cover_image || editingProject?.image)) {
+      const oldCover = editingProject.cover_image || editingProject.image;
+      if (oldCover) finalDeletedUrls.push(oldCover);
+    }
+
+
 
     try {
       // 1. Upload Cover Image if a new one is selected
@@ -220,8 +250,10 @@ const Products = () => {
         },
         cover_image: coverImageUrl,
         image: coverImageUrl,
-        gallery: galleryUrls
+        gallery: galleryUrls,
+        images: galleryUrls
       };
+
 
       if (editingProject) {
         const { error } = await supabase
@@ -242,7 +274,19 @@ const Products = () => {
 
       fetchProjects();
       handleCloseModal();
+
+      // 4. Cleanup Storage: Physical deletion of removed images
+      if (finalDeletedUrls.length > 0) {
+        const filePaths = finalDeletedUrls
+          .map(url => getFilePathFromUrl(url))
+          .filter(Boolean) as string[];
+        
+        if (filePaths.length > 0) {
+          await supabase.storage.from('images').remove(filePaths);
+        }
+      }
     } catch (error) {
+
       console.error('Error saving project:', error);
       toast.error("Failed to save project.");
     } finally {
@@ -250,21 +294,36 @@ const Products = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (project: Project) => {
     if (!confirm("Are you sure you want to delete this project?")) return;
 
     const { error } = await supabase
       .from('projects')
       .delete()
-      .eq('id', id);
+      .eq('id', project.id);
 
     if (error) {
       toast.error("Error deleting project: " + error.message);
     } else {
-      toast.success("Project deleted successfully!");
+      // Physical deletion of all associated images
+      const imagesToDelete = [
+        project.cover_image,
+        project.image,
+        ...(project.gallery || []),
+        ...(project.images || [])
+      ].map(url => getFilePathFromUrl(url)).filter(Boolean) as string[];
+
+      const uniquePaths = Array.from(new Set(imagesToDelete));
+      
+      if (uniquePaths.length > 0) {
+        await supabase.storage.from('images').remove(uniquePaths);
+      }
+
+      toast.success("Project and all media deleted successfully!");
       fetchProjects();
     }
   };
+
 
   const filteredProjects = dbProjects.filter(p => {
     const matchesSearch =
@@ -529,10 +588,30 @@ const Products = () => {
                   <span className="text-xs font-bold text-muted-foreground group-hover:text-primary transition-colors">Upload Multiple Images</span>
                 </label>
 
-                {galleryImages.length > 0 && (
+                {(currentGalleryUrls.length > 0 || galleryImages.length > 0) && (
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {/* Existing Gallery Images */}
+                    {currentGalleryUrls.map((url, i) => (
+                      <div key={`existing-${i}`} className="relative aspect-square rounded-lg bg-background border border-border overflow-hidden group">
+                        <img src={url} className="w-full h-full object-cover" alt="Gallery item" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeletedUrls(prev => [...prev, url]);
+                            setCurrentGalleryUrls(prev => prev.filter((_, idx) => idx !== i));
+                          }}
+                          className="absolute top-1 right-1 p-1.5 bg-destructive text-white rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shadow-lg"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+
+                        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 text-[8px] text-white rounded font-bold uppercase">Current</div>
+                      </div>
+                    ))}
+                    
+                    {/* New Gallery Images */}
                     {galleryImages.map((file, i) => (
-                      <div key={i} className="relative aspect-square rounded-lg bg-background border border-border overflow-hidden group">
+                      <div key={`new-${i}`} className="relative aspect-square rounded-lg bg-background border border-border overflow-hidden group">
                         <img src={URL.createObjectURL(file)} className="w-full h-full object-cover" alt="Gallery preview" />
                         <button
                           type="button"
@@ -541,12 +620,14 @@ const Products = () => {
                         >
                           <Trash2 size={14} />
                         </button>
+                        <div className="absolute bottom-1 left-1 px-1.5 py-0.5 bg-primary/80 text-[8px] text-white rounded font-bold uppercase">New</div>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             </div>
+
           </div>
 
           {/* Testimonial */}
@@ -624,11 +705,12 @@ const Products = () => {
                         <Edit size={14} /> Edit
                       </button>
                       <button
-                        onClick={() => handleDelete(product.id)}
+                        onClick={() => handleDelete(product)}
                         className="p-2 rounded-lg bg-secondary/50 text-muted-foreground hover:text-destructive transition-colors border border-border"
                       >
                         <Trash2 size={16} />
                       </button>
+
                     </div>
                   </div>
                 </div>
@@ -678,11 +760,12 @@ const Products = () => {
                             <Edit size={18} />
                           </button>
                           <button
-                            onClick={() => handleDelete(product.id)}
+                            onClick={() => handleDelete(product)}
                             className="p-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10 rounded-lg transition-all"
                           >
                             <Trash2 size={18} />
                           </button>
+
                         </div>
                       </td>
                     </tr>
